@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>BlueBeard.Zones</RootNamespace>
+    <AssemblyName>BlueBeard.Zones</AssemblyName>
+    <PackageId>BlueBeard.Zones</PackageId>
+    <Description>Advanced zone management for Unturned. Trigger colliders, persistent storage, 26 enforcement flags, block lists, and CLI administration.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlueBeard.Core\BlueBeard.Core.csproj" />
+    <ProjectReference Include="..\BlueBeard.Database\BlueBeard.Database.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" Private="false"><HintPath>..\Libs\Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="Rocket.API" Private="false"><HintPath>..\Libs\Rocket.API.dll</HintPath></Reference>
+    <Reference Include="Rocket.Core" Private="false"><HintPath>..\Libs\Rocket.Core.dll</HintPath></Reference>
+    <Reference Include="Rocket.Unturned" Private="false"><HintPath>..\Libs\Rocket.Unturned.dll</HintPath></Reference>
+    <Reference Include="UnityEngine" Private="false"><HintPath>..\Libs\UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule" Private="false"><HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.PhysicsModule" Private="false"><HintPath>..\Libs\UnityEngine.PhysicsModule.dll</HintPath></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net" Private="false"><HintPath>..\Libs\com.rlabrecque.steamworks.net.dll</HintPath></Reference>
+    <Reference Include="SDG.NetTransport" Private="false"><HintPath>..\Libs\SDG.NetTransport.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

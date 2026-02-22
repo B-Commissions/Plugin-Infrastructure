@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>BlueBeard.Database</RootNamespace>
+    <AssemblyName>BlueBeard.Database</AssemblyName>
+    <PackageId>BlueBeard.Database</PackageId>
+    <Description>Lightweight MySQL ORM for Unturned plugins. Attribute-based entity mapping, LINQ-to-SQL expressions, and automatic schema sync.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlueBeard.Core\BlueBeard.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MySqlConnector" Version="2.5.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Rocket.Core" Private="false"><HintPath>..\Libs\Rocket.Core.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

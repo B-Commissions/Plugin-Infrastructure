@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <Authors>B-Commissions</Authors>
+    <Company>B-Commissions</Company>
+    <PackageProjectUrl>https://github.com/B-Commissions/Plugin-Infrastructure</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/B-Commissions/Plugin-Infrastructure</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IsPackable>true</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Version is set by CI; fallback for local builds -->
+    <Version>0.0.0-local</Version>
+  </PropertyGroup>
+</Project>

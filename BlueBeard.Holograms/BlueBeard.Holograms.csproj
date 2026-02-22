@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>BlueBeard.Holograms</RootNamespace>
+    <AssemblyName>BlueBeard.Holograms</AssemblyName>
+    <PackageId>BlueBeard.Holograms</PackageId>
+    <Description>Proximity-based hologram system for Unturned. Pooled UI overlays, per-player state, and dynamic metadata.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlueBeard.Core\BlueBeard.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" Private="false"><HintPath>..\Libs\Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="SDG.NetTransport" Private="false"><HintPath>..\Libs\SDG.NetTransport.dll</HintPath></Reference>
+    <Reference Include="Rocket.Core" Private="false"><HintPath>..\Libs\Rocket.Core.dll</HintPath></Reference>
+    <Reference Include="UnityEngine" Private="false"><HintPath>..\Libs\UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule" Private="false"><HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.PhysicsModule" Private="false"><HintPath>..\Libs\UnityEngine.PhysicsModule.dll</HintPath></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net" Private="false"><HintPath>..\Libs\com.rlabrecque.steamworks.net.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

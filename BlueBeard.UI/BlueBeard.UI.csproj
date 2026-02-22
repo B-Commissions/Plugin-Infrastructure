@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>BlueBeard.UI</RootNamespace>
+    <AssemblyName>BlueBeard.UI</AssemblyName>
+    <PackageId>BlueBeard.UI</PackageId>
+    <Description>Full-screen UI framework for Unturned. Hierarchical screens and dialogs with automatic event routing and per-player state.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlueBeard.Core\BlueBeard.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" Private="false"><HintPath>..\Libs\Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="Rocket.API" Private="false"><HintPath>..\Libs\Rocket.API.dll</HintPath></Reference>
+    <Reference Include="Rocket.Core" Private="false"><HintPath>..\Libs\Rocket.Core.dll</HintPath></Reference>
+    <Reference Include="Rocket.Unturned" Private="false"><HintPath>..\Libs\Rocket.Unturned.dll</HintPath></Reference>
+    <Reference Include="UnityEngine" Private="false"><HintPath>..\Libs\UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule" Private="false"><HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="SDG.NetTransport" Private="false"><HintPath>..\Libs\SDG.NetTransport.dll</HintPath></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net" Private="false"><HintPath>..\Libs\com.rlabrecque.steamworks.net.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

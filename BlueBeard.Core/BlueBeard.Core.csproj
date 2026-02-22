@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>BlueBeard.Core</RootNamespace>
+    <AssemblyName>BlueBeard.Core</AssemblyName>
+    <PackageId>BlueBeard.Core</PackageId>
+    <Description>Foundation library for BlueBeard Unturned plugins. Provides configuration management, IManager lifecycle, command framework, and utility helpers.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Rocket.API" Private="false"><HintPath>..\Libs\Rocket.API.dll</HintPath></Reference>
+    <Reference Include="Rocket.Core" Private="false"><HintPath>..\Libs\Rocket.Core.dll</HintPath></Reference>
+    <Reference Include="Rocket.Unturned" Private="false"><HintPath>..\Libs\Rocket.Unturned.dll</HintPath></Reference>
+    <Reference Include="Assembly-CSharp" Private="false"><HintPath>..\Libs\Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net" Private="false"><HintPath>..\Libs\com.rlabrecque.steamworks.net.dll</HintPath></Reference>
+    <Reference Include="UnityEngine" Private="false"><HintPath>..\Libs\UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule" Private="false"><HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.PhysicsModule" Private="false"><HintPath>..\Libs\UnityEngine.PhysicsModule.dll</HintPath></Reference>
+    <Reference Include="SDG.NetTransport" Private="false"><HintPath>..\Libs\SDG.NetTransport.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>
