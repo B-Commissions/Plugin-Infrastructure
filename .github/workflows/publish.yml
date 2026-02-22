@@ -63,6 +63,7 @@ jobs:
 
       - name: Push to GitHub Packages
         run: |
+          dotnet nuget remove source github 2>/dev/null || true
           dotnet nuget add source "${{ env.NUGET_SOURCE }}" \
             --name github \
             --username ${{ github.actor }} \
