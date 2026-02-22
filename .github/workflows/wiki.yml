@@ -1,0 +1,69 @@
+name: Sync docs to Wiki
+
+on:
+  push:
+    branches: [main]
+    paths: [docs/**]
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Checkout wiki
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync docs to wiki
+        run: |
+          # Clear old wiki markdown files (preserve .git)
+          find wiki -maxdepth 1 -name '*.md' -delete
+
+          # ── Root-level docs ──
+          # Rewrite links like (Module/Page.md) or (Module/Page) → (Module-Page)
+          for file in docs/*.md; do
+            [ -f "$file" ] || continue
+            name=$(basename "$file")
+            sed -E 's/\]\(([A-Za-z]+)\/([A-Za-z0-9-]+)(\.md)?\)/](\1-\2)/g' \
+              "$file" > "wiki/$name"
+          done
+
+          # ── Copy _Sidebar.md as-is (already uses flattened names) ──
+          if [ -f docs/_Sidebar.md ]; then
+            cp docs/_Sidebar.md wiki/_Sidebar.md
+          fi
+
+          # ── Module subdirectories ──
+          # Flatten: docs/Zones/Flags.md → wiki/Zones-Flags.md
+          # Rewrite relative links: (Page.md) or (Page) → (Module-Page)
+          for dir in docs/*/; do
+            [ -d "$dir" ] || continue
+            module=$(basename "$dir")
+            for file in "$dir"*.md; do
+              [ -f "$file" ] || continue
+              name=$(basename "$file")
+              dest="wiki/${module}-${name}"
+              # Prefix relative links with module name
+              # Matches ](CapitalWord-Name) or ](CapitalWord-Name.md) but not URLs or anchors
+              sed -E 's/\]\(([A-Z][A-Za-z0-9-]+)(\.md)?\)/]('"$module"'-\1)/g' \
+                "$file" > "$dest"
+            done
+          done
+
+      - name: Push wiki
+        run: |
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "Sync wiki from docs/ ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push
