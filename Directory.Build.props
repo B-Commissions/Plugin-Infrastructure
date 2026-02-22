@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+    <MSBuildEnableWorkloadResolver>false</MSBuildEnableWorkloadResolver>
     <Authors>B-Commissions</Authors>
     <Company>B-Commissions</Company>
     <PackageProjectUrl>https://github.com/B-Commissions/Plugin-Infrastructure</PackageProjectUrl>
