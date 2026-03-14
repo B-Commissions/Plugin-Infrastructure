@@ -14,12 +14,13 @@ public class DatabaseManager : IManager
     private string _connectionString;
     private readonly ConcurrentDictionary<Type, object> _dbSets = new();
     private readonly List<Type> _entityTypes = new();
-    private ConfigManager _configManager;
+    private DatabaseConfig _config;
 
-    public void Initialize(ConfigManager configManager)
-    {
-        _configManager = configManager;
-    }
+    public void Initialize(ConfigManager configManager) =>
+        _config = configManager.GetConfig<DatabaseConfig>();
+
+    public void Initialize(DatabaseConfig config) =>
+        _config = config;
 
     public void RegisterEntity<T>() where T : new()
     {
@@ -28,14 +29,13 @@ public class DatabaseManager : IManager
 
     public void Load()
     {
-        var config = _configManager.GetConfig<DatabaseConfig>();
         _connectionString = new MySqlConnectionStringBuilder
         {
-            Server = config.Host,
-            Port = config.Port,
-            Database = config.Database,
-            UserID = config.Username,
-            Password = config.Password
+            Server = _config.Host,
+            Port = _config.Port,
+            Database = _config.Database,
+            UserID = _config.Username,
+            Password = _config.Password
         }.ConnectionString;
 
         SyncSchema();
@@ -68,18 +68,12 @@ public class DatabaseManager : IManager
         });
     }
 
-    public void Unload()
-    {
+    public void Unload() =>
         _dbSets.Clear();
-    }
 
-    public DbSet<T> Table<T>() where T : new()
-    {
-        return (DbSet<T>)_dbSets.GetOrAdd(typeof(T), _ => new DbSet<T>(CreateConnection));
-    }
+    public DbSet<T> Table<T>() where T : new() =>
+        (DbSet<T>)_dbSets.GetOrAdd(typeof(T), _ => new DbSet<T>(CreateConnection));
 
-    public MySqlConnection CreateConnection()
-    {
-        return new MySqlConnection(_connectionString);
-    }
+    private MySqlConnection CreateConnection() =>
+        new(_connectionString);
 }
