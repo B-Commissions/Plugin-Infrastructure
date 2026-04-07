@@ -52,7 +52,7 @@ jobs:
 
       - name: Pack
         run: |
-          for project in BlueBeard.Core BlueBeard.Database BlueBeard.Effects BlueBeard.Holograms BlueBeard.UI BlueBeard.Zones; do
+          for project in BlueBeard.Core BlueBeard.Database BlueBeard.Effects BlueBeard.Holograms BlueBeard.SnapLogic BlueBeard.UI BlueBeard.Zones; do
             dotnet pack "$project/$project.csproj" \
               --configuration Release \
               --no-build \
