@@ -38,6 +38,14 @@
 - [Event Routing](UI-Event-Routing)
 - [Examples](UI-Examples)
 
+### SnapLogic
+- [Overview](SnapLogic-Home)
+- [Getting Started](SnapLogic-Getting-Started)
+- [Snap Points](SnapLogic-Snap-Points)
+- [Configuration](SnapLogic-Configuration)
+- [Events](SnapLogic-Events)
+- [Examples](SnapLogic-Examples)
+
 ### Zones
 - [Overview](Zones-Home)
 - [Installation](Zones-Installation)
