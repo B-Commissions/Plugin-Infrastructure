@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>BlueBeard.SnapLogic</RootNamespace>
+    <AssemblyName>BlueBeard.SnapLogic</AssemblyName>
+    <PackageId>BlueBeard.SnapLogic</PackageId>
+    <Description>Reusable snap-point system for Unturned barricades. Define attachment points on host barricades and automatically snap placed barricades into position.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlueBeard.Core\BlueBeard.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" Private="false"><HintPath>..\Libs\Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="Rocket.API" Private="false"><HintPath>..\Libs\Rocket.API.dll</HintPath></Reference>
+    <Reference Include="Rocket.Core" Private="false"><HintPath>..\Libs\Rocket.Core.dll</HintPath></Reference>
+    <Reference Include="Rocket.Unturned" Private="false"><HintPath>..\Libs\Rocket.Unturned.dll</HintPath></Reference>
+    <Reference Include="UnityEngine" Private="false"><HintPath>..\Libs\UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule" Private="false"><HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.PhysicsModule" Private="false"><HintPath>..\Libs\UnityEngine.PhysicsModule.dll</HintPath></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net" Private="false"><HintPath>..\Libs\com.rlabrecque.steamworks.net.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

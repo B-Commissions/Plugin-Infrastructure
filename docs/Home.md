@@ -40,6 +40,14 @@ Full-screen UI framework with hierarchical screens, dialogs, and per-player stat
 - [Event Routing](UI/Event-Routing.md) -- Button and text input dispatch
 - [Examples](UI/Examples.md) -- Multi-screen UI with pagination and dialogs
 
+### [SnapLogic](SnapLogic/Home.md)
+Snap-point system for attaching barricades to defined positions on host barricades.
+- [Getting Started](SnapLogic/Getting-Started.md) -- Setup and core concepts
+- [Snap Points](SnapLogic/Snap-Points.md) -- Defining attachment points and asset filtering
+- [Configuration](SnapLogic/Configuration.md) -- SnapLogicConfig options
+- [Events](SnapLogic/Events.md) -- Snap lifecycle hooks
+- [Examples](SnapLogic/Examples.md) -- Weapon racks, shelves, targeted snapping
+
 ### [Zones](Zones/Home.md)
 Advanced zone management with triggers, persistent storage, flags, and administration.
 - [Installation](Zones/Installation.md) -- Setup as plugin or library
