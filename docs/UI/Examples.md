@@ -1,83 +1,105 @@
 # Examples
 
-This page shows a complete multi-screen UI implementation with pagination, a modal dialog, async data loading, and common `EffectManager` patterns.
+This page shows a complete multi-screen UI implementation with pagination, a modal dialog, async data loading, push updates, and common `EffectManager` patterns.
 
 ---
 
 ## FactionUI -- A Complete Multi-Screen Example
 
-This example builds a faction management panel with two screens (Overview and Members), a confirmation dialog for kicking members, pagination, search, and async data loading.
+This example builds a faction management panel with two screens (Overview and Members), a confirmation dialog for kicking members, pagination, search, and async data loading. Every screen and dialog is registered by type via `UIBuilder`, and an external `RentManager` pushes updates into the UI.
 
 ### File Structure
 
 ```
 FactionPlugin/
-  FactionPlugin.cs          -- plugin entry point
+  FactionPlugin.cs             -- plugin entry point with static UI singleton
   UI/
-    FactionUI.cs             -- IUI implementation
-    FactionOverviewScreen.cs -- IUIScreen: faction stats
-    FactionMembersScreen.cs  -- IUIScreen: member list with pagination
-    ConfirmKickDialog.cs     -- IUIDialog: confirm before kicking
+    FactionUI.cs                -- IUI<FactionUI> implementation
+    FactionOverviewScreen.cs    -- IUIScreen: faction stats
+    FactionMembersScreen.cs     -- IUIScreen: member list with pagination
+    ConfirmKickDialog.cs        -- IUIDialog: confirm before kicking
   Commands/
-    FactionCommand.cs        -- opens the UI
+    FactionCommand.cs           -- opens the UI
 ```
+
+---
+
+### FactionPlugin.cs -- Static singleton
+
+```csharp
+using BlueBeard.UI;
+using Rocket.Core.Plugins;
+
+public class FactionPlugin : RocketPlugin
+{
+    public static FactionPlugin Instance { get; private set; }
+    public UIManager UI { get; private set; }
+
+    protected override void Load()
+    {
+        Instance = this;
+        UI = new UIManager();
+        UI.Load();
+
+        UI.RegisterUI<FactionUI>();   // Configure runs here, screens/dialogs are instantiated
+    }
+
+    protected override void Unload()
+    {
+        UI.Unload();
+        Instance = null;
+    }
+}
+```
+
+Screens and dialogs access the manager through `FactionPlugin.Instance.UI` because the `new()` constraint forbids constructor injection.
 
 ---
 
 ### FactionUI.cs -- The Top-Level Container
 
 ```csharp
+using System.Collections.Generic;
 using BlueBeard.UI;
 using SDG.Unturned;
 
-public class FactionUI : IUI
+public class FactionUI : UIBase, IUI<FactionUI>
 {
-    public string Id => "faction";
-    public ushort EffectId => 50600;
-    public short EffectKey => (short)EffectId;
-    public IUIScreen[] Screens => new IUIScreen[] { OverviewScreen, MembersScreen };
-    public IUIScreen DefaultScreen => OverviewScreen;
+    public override string Id => "faction";
+    public override ushort EffectId => 50600;
+    public override short EffectKey => (short)EffectId;
 
-    public FactionOverviewScreen OverviewScreen { get; } = new();
-    public FactionMembersScreen MembersScreen { get; } = new();
-
-    private readonly UIManager _uiManager;
-
-    public FactionUI(UIManager uiManager)
+    public void Configure(UIBuilder builder)
     {
-        _uiManager = uiManager;
+        builder
+            .AddScreen<FactionOverviewScreen>(isDefault: true)
+            .AddScreen<FactionMembersScreen>()
+            .AddDialog<ConfirmKickDialog>();
     }
 
-    public void OnOpened(UIContext ctx)
+    public override void OnOpened(UIContext ctx)
     {
-        // Set the faction name in the header (visible on all screens)
-        string factionName = GetFactionName(ctx.Player.CSteamID.m_SteamID);
+        var factionName = GetFactionName(ctx.Player.CSteamID.m_SteamID);
         EffectManager.sendUIEffectText(ctx.EffectKey, ctx.Connection, true,
             "Canvas/Header/FactionName", factionName);
 
-        // Highlight the default tab
         EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
             "Canvas/Header/Tab_Overview_Active", true);
         EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
             "Canvas/Header/Tab_Members_Active", false);
     }
 
-    public void OnClosed(UIContext ctx)
-    {
-        // No cleanup needed
-    }
-
-    public void OnButtonPressed(UIContext ctx, string buttonName)
+    public override void OnButtonPressed(UIContext ctx, string buttonName)
     {
         // 1. Global buttons
         switch (buttonName)
         {
             case "Faction_Close":
-                _uiManager.CloseUI(ctx.Player);
+                FactionPlugin.Instance.UI.CloseUI(ctx.Player);
                 return;
 
             case "Faction_Tab_Overview":
-                _uiManager.SetScreen(ctx.Player, OverviewScreen);
+                FactionPlugin.Instance.UI.SetScreen<FactionOverviewScreen>(ctx.Player);
                 EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
                     "Canvas/Header/Tab_Overview_Active", true);
                 EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
@@ -85,7 +107,7 @@ public class FactionUI : IUI
                 return;
 
             case "Faction_Tab_Members":
-                _uiManager.SetScreen(ctx.Player, MembersScreen);
+                FactionPlugin.Instance.UI.SetScreen<FactionMembersScreen>(ctx.Player);
                 EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
                     "Canvas/Header/Tab_Overview_Active", false);
                 EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
@@ -104,7 +126,7 @@ public class FactionUI : IUI
         ctx.Component.CurrentScreen?.OnButtonPressed(ctx, buttonName);
     }
 
-    public void OnTextSubmitted(UIContext ctx, string inputName, string text)
+    public override void OnTextSubmitted(UIContext ctx, string inputName, string text)
     {
         if (ctx.Component.CurrentDialog != null)
         {
@@ -115,11 +137,18 @@ public class FactionUI : IUI
         ctx.Component.CurrentScreen?.OnTextSubmitted(ctx, inputName, text);
     }
 
-    private string GetFactionName(ulong steamId)
+    // Last-resort catch for updates no dialog/screen consumed.
+    public override bool OnUpdate(UIContext ctx, string key, object value)
     {
-        // Your data access logic here
-        return "The Iron Guard";
+        if (key == "faction.disbanded")
+        {
+            FactionPlugin.Instance.UI.CloseUI(ctx.Player);
+            return true;
+        }
+        return false;
     }
+
+    private string GetFactionName(ulong steamId) => "The Iron Guard";
 }
 ```
 
@@ -131,44 +160,42 @@ public class FactionUI : IUI
 using BlueBeard.UI;
 using SDG.Unturned;
 
-public class FactionOverviewScreen : IUIScreen
+public class FactionOverviewScreen : UIScreenBase
 {
-    public string Id => "overview";
-    public IUIDialog[] Dialogs => System.Array.Empty<IUIDialog>();
+    public override string Id => "overview";
 
-    public void OnShow(UIContext ctx)
+    public override void OnShow(UIContext ctx)
     {
         EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
             "Canvas/OverviewPanel", true);
-
-        // Populate some stats
         EffectManager.sendUIEffectText(ctx.EffectKey, ctx.Connection, true,
             "Canvas/OverviewPanel/MemberCount", "12 Members");
         EffectManager.sendUIEffectText(ctx.EffectKey, ctx.Connection, true,
             "Canvas/OverviewPanel/TerritoryCount", "3 Territories");
     }
 
-    public void OnHide(UIContext ctx)
+    public override void OnHide(UIContext ctx)
     {
         EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
             "Canvas/OverviewPanel", false);
     }
 
-    public void OnButtonPressed(UIContext ctx, string buttonName)
+    public override bool OnUpdate(UIContext ctx, string key, object value)
     {
-        // No screen-specific buttons in this example
-    }
-
-    public void OnTextSubmitted(UIContext ctx, string inputName, string text)
-    {
-        // No text inputs in this screen
+        if (key == "faction.stats_changed")
+        {
+            // Re-render the stats panel without having to be told exactly what changed.
+            OnShow(ctx);
+            return true;
+        }
+        return false;
     }
 }
 ```
 
 ---
 
-### FactionMembersScreen.cs -- Pagination Using State
+### FactionMembersScreen.cs -- Pagination + Push Updates
 
 ```csharp
 using System;
@@ -176,26 +203,15 @@ using System.Collections.Generic;
 using BlueBeard.UI;
 using SDG.Unturned;
 
-public class FactionMembersScreen : IUIScreen
+public class FactionMembersScreen : UIScreenBase
 {
-    public string Id => "members";
-    public IUIDialog[] Dialogs => new IUIDialog[] { ConfirmKickDialog };
-
-    public ConfirmKickDialog ConfirmKickDialog { get; } = new();
+    public override string Id => "members";
 
     private const int PageSize = 5;
     private const int MaxRows = 5;
 
-    private readonly UIManager _uiManager;
-
-    public FactionMembersScreen(UIManager uiManager)
+    public override void OnShow(UIContext ctx)
     {
-        _uiManager = uiManager;
-    }
-
-    public void OnShow(UIContext ctx)
-    {
-        // Initialize pagination state
         ctx.Component.State["members.page"] = 0;
         ctx.Component.State["members.search"] = "";
 
@@ -205,19 +221,19 @@ public class FactionMembersScreen : IUIScreen
         RefreshList(ctx);
     }
 
-    public void OnHide(UIContext ctx)
+    public override void OnHide(UIContext ctx)
     {
         EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
             "Canvas/MembersPanel", false);
     }
 
-    public void OnButtonPressed(UIContext ctx, string buttonName)
+    public override void OnButtonPressed(UIContext ctx, string buttonName)
     {
         switch (buttonName)
         {
             case "Members_PrevPage":
             {
-                int page = (int)ctx.Component.State["members.page"];
+                var page = (int)ctx.Component.State["members.page"];
                 if (page > 0)
                 {
                     ctx.Component.State["members.page"] = page - 1;
@@ -228,29 +244,26 @@ public class FactionMembersScreen : IUIScreen
 
             case "Members_NextPage":
             {
-                int page = (int)ctx.Component.State["members.page"];
+                var page = (int)ctx.Component.State["members.page"];
                 ctx.Component.State["members.page"] = page + 1;
                 RefreshList(ctx);
                 break;
             }
 
-            // Each row has a kick button named Members_Kick_0 through Members_Kick_4
             case string s when s.StartsWith("Members_Kick_"):
             {
-                int rowIndex = int.Parse(s.Replace("Members_Kick_", ""));
-                int page = (int)ctx.Component.State["members.page"];
-                int memberIndex = (page * PageSize) + rowIndex;
+                var rowIndex = int.Parse(s.Replace("Members_Kick_", ""));
+                var page = (int)ctx.Component.State["members.page"];
+                var memberIndex = (page * PageSize) + rowIndex;
 
-                // Store the target in State so the dialog can read it
                 ctx.Component.State["confirm_kick.targetIndex"] = memberIndex;
-
-                _uiManager.OpenDialog(ctx.Player, ConfirmKickDialog);
+                FactionPlugin.Instance.UI.OpenDialog<ConfirmKickDialog>(ctx.Player);
                 break;
             }
         }
     }
 
-    public void OnTextSubmitted(UIContext ctx, string inputName, string text)
+    public override void OnTextSubmitted(UIContext ctx, string inputName, string text)
     {
         if (inputName == "Members_SearchInput")
         {
@@ -260,65 +273,20 @@ public class FactionMembersScreen : IUIScreen
         }
     }
 
-    private void RefreshList(UIContext ctx)
+    // A push update saying someone joined/left -- refresh the current page.
+    public override bool OnUpdate(UIContext ctx, string key, object value)
     {
-        int page = (int)ctx.Component.State["members.page"];
-        string search = (string)ctx.Component.State["members.search"];
-
-        // Fetch and filter members (replace with your data access)
-        List<FactionMember> allMembers = GetMembers(ctx.Player.CSteamID.m_SteamID);
-
-        if (!string.IsNullOrEmpty(search))
-            allMembers = allMembers.FindAll(m =>
-                m.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0);
-
-        int totalPages = Math.Max(1, (int)Math.Ceiling(allMembers.Count / (double)PageSize));
-
-        // Clamp page
-        if (page >= totalPages)
+        if (key == "members.changed")
         {
-            page = totalPages - 1;
-            ctx.Component.State["members.page"] = page;
+            RefreshList(ctx);
+            return true;
         }
-
-        // Update page indicator
-        EffectManager.sendUIEffectText(ctx.EffectKey, ctx.Connection, true,
-            "Canvas/MembersPanel/PageLabel", $"Page {page + 1} / {totalPages}");
-
-        // Populate rows
-        int start = page * PageSize;
-        for (int i = 0; i < MaxRows; i++)
-        {
-            int idx = start + i;
-            bool hasData = idx < allMembers.Count;
-            string rowPath = $"Canvas/MembersPanel/Row_{i}";
-
-            EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
-                rowPath, hasData);
-
-            if (hasData)
-            {
-                var member = allMembers[idx];
-                EffectManager.sendUIEffectText(ctx.EffectKey, ctx.Connection, true,
-                    $"{rowPath}/Name", member.Name);
-                EffectManager.sendUIEffectText(ctx.EffectKey, ctx.Connection, true,
-                    $"{rowPath}/Rank", member.Rank);
-                EffectManager.sendUIEffectImageURL(ctx.EffectKey, ctx.Connection, true,
-                    $"{rowPath}/Avatar", member.AvatarUrl);
-            }
-        }
-
-        // Show/hide prev/next buttons
-        EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
-            "Canvas/MembersPanel/PrevButton", page > 0);
-        EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
-            "Canvas/MembersPanel/NextButton", page < totalPages - 1);
+        return false;
     }
 
-    private List<FactionMember> GetMembers(ulong steamId)
+    private void RefreshList(UIContext ctx)
     {
-        // Replace with actual data access
-        return new List<FactionMember>();
+        // ... populate rows as before (see previous docs revision for detail)
     }
 }
 ```
@@ -331,57 +299,42 @@ public class FactionMembersScreen : IUIScreen
 using BlueBeard.UI;
 using SDG.Unturned;
 
-public class ConfirmKickDialog : IUIDialog
+public class ConfirmKickDialog : UIDialogBase
 {
-    public string Id => "confirm_kick";
+    public override string Id => "confirm_kick";
 
-    private UIManager _uiManager;
-
-    public ConfirmKickDialog(UIManager uiManager)
+    public override void OnShow(UIContext ctx)
     {
-        _uiManager = uiManager;
-    }
-
-    public void OnShow(UIContext ctx)
-    {
-        // Show the overlay
         EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
             "Canvas/ConfirmKickPanel", true);
 
-        // Display the target member's name
-        int targetIndex = (int)ctx.Component.State["confirm_kick.targetIndex"];
-        string targetName = GetMemberNameByIndex(targetIndex);
+        var targetIndex = (int)ctx.Component.State["confirm_kick.targetIndex"];
+        var targetName = GetMemberNameByIndex(targetIndex);
         EffectManager.sendUIEffectText(ctx.EffectKey, ctx.Connection, true,
             "Canvas/ConfirmKickPanel/Message",
             $"Are you sure you want to kick {targetName}?");
     }
 
-    public void OnHide(UIContext ctx)
+    public override void OnHide(UIContext ctx)
     {
         EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
             "Canvas/ConfirmKickPanel", false);
     }
 
-    public void OnButtonPressed(UIContext ctx, string buttonName)
+    public override void OnButtonPressed(UIContext ctx, string buttonName)
     {
         switch (buttonName)
         {
             case "ConfirmKick_Yes":
-                int targetIndex = (int)ctx.Component.State["confirm_kick.targetIndex"];
+                var targetIndex = (int)ctx.Component.State["confirm_kick.targetIndex"];
                 PerformKick(ctx.Player.CSteamID.m_SteamID, targetIndex);
-                _uiManager.CloseDialog(ctx.Player);
-                // Optionally refresh the member list on the screen behind the dialog
+                FactionPlugin.Instance.UI.CloseDialog(ctx.Player);
                 break;
 
             case "ConfirmKick_No":
-                _uiManager.CloseDialog(ctx.Player);
+                FactionPlugin.Instance.UI.CloseDialog(ctx.Player);
                 break;
         }
-    }
-
-    public void OnTextSubmitted(UIContext ctx, string inputName, string text)
-    {
-        // No text inputs in this dialog
     }
 
     private string GetMemberNameByIndex(int index) => "SomeMember";
@@ -391,7 +344,7 @@ public class ConfirmKickDialog : IUIDialog
 
 ---
 
-### Registration and Opening from a Command
+### Opening from a Command
 
 ```csharp
 using BlueBeard.UI;
@@ -408,51 +361,65 @@ public class FactionCommand : IRocketCommand
     public List<string> Aliases => new();
     public List<string> Permissions => new() { "faction.open" };
 
-    private readonly UIManager _uiManager;
-    private readonly FactionUI _factionUI;
-
-    public FactionCommand(UIManager uiManager, FactionUI factionUI)
-    {
-        _uiManager = uiManager;
-        _factionUI = factionUI;
-    }
-
     public void Execute(IRocketPlayer caller, string[] command)
     {
         var player = (UnturnedPlayer)caller;
-        _uiManager.OpenUI(player, _factionUI);
+        FactionPlugin.Instance.UI.OpenUI<FactionUI>(player);
     }
 }
 ```
 
-**Plugin initialization:**
+---
+
+## Push Update Example: RentManager
+
+An external system that knows nothing about the UI's internal structure can still notify it of state changes via `PushUpdate`:
 
 ```csharp
-using BlueBeard.UI;
-using Rocket.Core.Plugins;
+using System.Collections.Generic;
+using BlueBeard.Core.Helpers;
+using Rocket.Unturned.Player;
+using Steamworks;
 
-public class FactionPlugin : RocketPlugin
+public class RentManager
 {
-    private UIManager _uiManager;
-    private FactionUI _factionUI;
-
-    protected override void Load()
+    public void CollectRent(Property property, string renterName)
     {
-        _uiManager = new UIManager();
-        _uiManager.Load();
+        // ... perform the transaction ...
 
-        _factionUI = new FactionUI(_uiManager);
-        _uiManager.RegisterUI(_factionUI);
-
-        // Register command (varies by framework)
+        // Notify the owner's UI if they're viewing the housing panel.
+        var ownerPlayer = UnturnedPlayer.FromCSteamID(new CSteamID(property.OwnerSteamId));
+        if (ownerPlayer != null)
+        {
+            ThreadHelper.RunSynchronously(() =>
+            {
+                FactionPlugin.Instance.UI.PushUpdate(ownerPlayer, "rent.collected",
+                    new Dictionary<string, object>
+                    {
+                        ["renter"]   = renterName,
+                        ["amount"]   = property.RentPrice,
+                        ["next_due"] = property.RentDueAt,
+                    });
+            });
+        }
     }
 
-    protected override void Unload()
+    // Tell every online player who has the ShopUI open that stock changed.
+    public void OnShopPurchase(int itemId, int remaining)
     {
-        _uiManager.Unload();
+        FactionPlugin.Instance.UI.PushUpdateAll<ShopUI>("stock.changed",
+            new Dictionary<string, object>
+            {
+                ["itemId"]    = itemId,
+                ["remaining"] = remaining,
+            });
     }
 }
 ```
+
+The update travels through the dialog → screen → IUI chain on the owner's active UI. Any layer can consume it by returning `true` from `OnUpdate`. If no layer handles it, the update is silently dropped (no exception, no warning).
+
+See [Event Routing](Event-Routing.md) for the full push-update dispatch documentation.
 
 ---
 
@@ -470,8 +437,6 @@ EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
     "Canvas/Panel/ElementName", false);  // hide
 ```
 
-The string path is the hierarchy path of the Unity `GameObject` within the effect prefab. The `true` after `ctx.Connection` is the `reliable` parameter.
-
 ### Set Text
 
 ```csharp
@@ -488,72 +453,52 @@ EffectManager.sendUIEffectImageURL(ctx.EffectKey, ctx.Connection, true,
     "Canvas/Panel/Avatar", "https://example.com/avatar.png");
 ```
 
-The URL must be publicly accessible. Commonly used with Steam avatar URLs.
-
 ---
 
 ## Async Data Loading Pattern
 
-Use `ThreadHelper` from BlueBeard.Core to load data off the main thread and update the UI back on the main thread. This prevents server lag when fetching from a database or HTTP API.
+Use `ThreadHelper` from `BlueBeard.Core` to load data off the main thread and update the UI back on the main thread:
 
 ```csharp
 using BlueBeard.Core.Helpers;
 using BlueBeard.UI;
 using SDG.Unturned;
 
-public class FactionMembersScreen : IUIScreen
+public override void OnShow(UIContext ctx)
 {
-    // ... properties omitted for brevity
+    ctx.Component.State["members.page"] = 0;
 
-    public void OnShow(UIContext ctx)
+    EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
+        "Canvas/MembersPanel", true);
+    EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
+        "Canvas/MembersPanel/Loading", true);
+
+    var steamId = ctx.Player.CSteamID.m_SteamID;
+    ThreadHelper.RunAsynchronously(async () =>
     {
-        ctx.Component.State["members.page"] = 0;
+        // Background thread -- safe for DB/HTTP calls
+        var members = await database.Table<Member>()
+            .Where(m => m.FactionId == GetFactionId(steamId));
 
-        // Show the screen and a loading spinner
-        EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
-            "Canvas/MembersPanel", true);
-        EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
-            "Canvas/MembersPanel/Loading", true);
-        EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
-            "Canvas/MembersPanel/Content", false);
-
-        ulong steamId = ctx.Player.CSteamID.m_SteamID;
-
-        ThreadHelper.RunAsynchronously(async () =>
+        ThreadHelper.RunSynchronously(() =>
         {
-            // This runs on a background thread -- safe for DB/HTTP calls
-            var members = await database.Table<Member>()
-                .Where(m => m.FactionId == GetFactionId(steamId));
+            // Guard: the player may have closed the UI while we were loading
+            if (!ctx.Component.IsOpen) return;
 
-            // Switch back to the main thread to update the UI
-            ThreadHelper.RunSynchronously(() =>
-            {
-                // Guard: player may have closed the UI while we were loading
-                if (!ctx.Component.IsOpen) return;
+            ctx.Component.State["members.data"] = members;
 
-                // Cache the data in State
-                ctx.Component.State["members.data"] = members;
-
-                // Hide loading, show content
-                EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
-                    "Canvas/MembersPanel/Loading", false);
-                EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
-                    "Canvas/MembersPanel/Content", true);
-
-                // Populate the list
-                RefreshList(ctx);
-            });
+            EffectManager.sendUIEffectVisibility(ctx.EffectKey, ctx.Connection, true,
+                "Canvas/MembersPanel/Loading", false);
+            RefreshList(ctx);
         });
-    }
-
-    // ... rest of screen
+    });
 }
 ```
 
-### Key Points for Async Loading
+### Key Points
 
-1. **Show a loading indicator** before starting the async operation so the player knows something is happening.
-2. **Use `ThreadHelper.RunAsynchronously`** with an `async` lambda for database or HTTP calls.
-3. **Use `ThreadHelper.RunSynchronously`** to switch back to the main thread before calling any `EffectManager` methods (they are not thread-safe).
-4. **Guard against stale state.** The player may close the UI or disconnect while the async operation is in progress. Always check `ctx.Component.IsOpen` before updating the UI.
-5. **Cache fetched data in `State`** if you need it later (e.g., for pagination or row selection) to avoid redundant queries.
+1. Show a loading indicator before starting async work.
+2. Use `ThreadHelper.RunAsynchronously` for the DB/HTTP call.
+3. Use `ThreadHelper.RunSynchronously` to switch back to the main thread before touching `EffectManager`.
+4. Guard against stale state (`ctx.Component.IsOpen`) in case the player closed the UI.
+5. Cache fetched data in `State` if you need it later for pagination or selection.

@@ -283,6 +283,36 @@ _effects.Start(definition, audience);
 
 ---
 
+## Scaled One-Shot Effect
+
+Emit an oversized one-shot effect by setting `Scale`. When `Scale` is non-null the emitter switches to `TriggerEffectParameters` so the client renders the effect at the requested size. Leaving `Scale` null preserves the default (unscaled) fast path.
+
+```csharp
+using BlueBeard.Effects;
+using BlueBeard.Effects.Audiences;
+using BlueBeard.Effects.Patterns;
+using UnityEngine;
+
+public void SpawnGiantExplosion(Vector3 position)
+{
+    var definition = new EffectDefinition
+    {
+        EffectId      = 394,
+        Pattern       = new SinglePointPattern(),
+        Origin        = position,
+        SnapToSurface = true,
+        OneShot       = true,
+        Scale         = new Vector3(3f, 3f, 3f),   // 3x uniform scale
+    };
+
+    _effects.Start(definition, new AllPlayersAudience());
+}
+```
+
+Non-uniform scale works the same way -- e.g. `new Vector3(1f, 5f, 1f)` for a tall column of effects, or `new Vector3(4f, 0.5f, 4f)` for a wide shockwave.
+
+---
+
 ## Combining Patterns and Audiences
 
 You can freely combine any pattern with any audience. Here is a repeating scatter effect visible only to a specific group:

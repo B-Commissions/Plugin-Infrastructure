@@ -9,6 +9,13 @@
 - [Helpers](Core-Helpers)
 - [Examples](Core-Examples)
 
+### Cooldowns
+- [Overview](Cooldowns-Home)
+- [Getting Started](Cooldowns-Getting-Started)
+- [Cooldown Manager](Cooldowns-Cooldown-Manager)
+- [Persistence](Cooldowns-Persistence)
+- [Examples](Cooldowns-Examples)
+
 ### Database
 - [Overview](Database-Home)
 - [Getting Started](Database-Getting-Started)
@@ -23,6 +30,13 @@
 - [Audiences](Effects-Audiences)
 - [Examples](Effects-Examples)
 
+### Events
+- [Overview](Events-Home)
+- [Getting Started](Events-Getting-Started)
+- [Event Bus](Events-Event-Bus)
+- [Contexts](Events-Contexts)
+- [Examples](Events-Examples)
+
 ### Holograms
 - [Overview](Holograms-Home)
 - [Getting Started](Holograms-Getting-Started)
@@ -30,13 +44,19 @@
 - [Dynamic Updates](Holograms-Dynamic-Updates)
 - [Examples](Holograms-Examples)
 
-### UI
-- [Overview](UI-Home)
-- [Getting Started](UI-Getting-Started)
-- [Interfaces](UI-Interfaces)
-- [Player State](UI-Player-State)
-- [Event Routing](UI-Event-Routing)
-- [Examples](UI-Examples)
+### Items
+- [Overview](Items-Home)
+- [Getting Started](Items-Getting-Started)
+- [State Encoding](Items-State-Encoding)
+- [Behaviour Registry](Items-Behaviour-Registry)
+- [Examples](Items-Examples)
+
+### MiniGames
+- [Overview](MiniGames-Home)
+- [Getting Started](MiniGames-Getting-Started)
+- [Definitions and Handlers](MiniGames-Definitions-and-Handlers)
+- [Lifecycle](MiniGames-Lifecycle)
+- [Examples](MiniGames-Examples)
 
 ### SnapLogic
 - [Overview](SnapLogic-Home)
@@ -45,6 +65,14 @@
 - [Configuration](SnapLogic-Configuration)
 - [Events](SnapLogic-Events)
 - [Examples](SnapLogic-Examples)
+
+### UI
+- [Overview](UI-Home)
+- [Getting Started](UI-Getting-Started)
+- [Interfaces](UI-Interfaces)
+- [Player State](UI-Player-State)
+- [Event Routing](UI-Event-Routing)
+- [Examples](UI-Examples)
 
 ### Zones
 - [Overview](Zones-Home)

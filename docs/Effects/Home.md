@@ -10,6 +10,7 @@ BlueBeard.Effects is a managed effect emitter system for Unturned. It provides a
 - **Automatic lifecycle management** -- each emitter runs inside a Unity coroutine on its own `GameObject`, so timing and cleanup are handled for you.
 - **One-shot and repeating modes** -- fire an effect once and auto-dispose, or repeat on an interval until you stop it.
 - **Surface snapping** -- optionally snap effect positions to the ground surface via raycast (enabled by default).
+- **Optional per-axis scale** -- set `EffectDefinition.Scale` to a `Vector3` and emission switches to `TriggerEffectParameters` so the client applies the requested scale. Leaving it `null` preserves the fast `sendEffectReliable` path bit-for-bit.
 
 ## Documentation
 
@@ -42,6 +43,7 @@ EffectDefinition
   |-- Interval       : float           (seconds between repeats)
   |-- SnapToSurface  : bool            (raycast to ground, default true)
   |-- OneShot        : bool            (fire once then auto-stop)
+  |-- Scale          : Vector3?        (optional, null = default scale via fast path)
 ```
 
 ## Namespace Map

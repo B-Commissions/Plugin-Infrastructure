@@ -56,7 +56,8 @@ var definition = new EffectDefinition
     Pattern        = new SinglePointPattern(),   // one point at the origin
     Origin         = new Vector3(100f, 0f, 200f),
     SnapToSurface  = true,                       // raycast to ground (default)
-    OneShot        = true                        // fire once then auto-dispose
+    OneShot        = true,                       // fire once then auto-dispose
+    // Scale        = new Vector3(2f, 2f, 2f),   // optional -- see "Scaling effects" below
 };
 
 var audience = new AllPlayersAudience();
@@ -81,9 +82,31 @@ On each iteration the coroutine:
 2. Iterates every offset point from `Definition.Pattern.GetPoints()`.
 3. Adds each offset to `Definition.Origin` to get the world position.
 4. If `SnapToSurface` is true, raycasts the position onto the ground via `SurfaceHelper.SnapPositionToSurface`.
-5. Sends the effect to every recipient using `EffectManager.sendEffectReliable`.
-6. If `OneShot` is false, waits `Definition.Interval` seconds, then loops again.
-7. If `OneShot` is true, the loop exits and the `Completed` event fires.
+5. If `Definition.Scale` is `null`, sends the effect to every recipient using `EffectManager.sendEffectReliable` (the fast legacy path).
+6. If `Definition.Scale` has a value, constructs a `TriggerEffectParameters` with the scale populated and dispatches via `EffectManager.triggerEffect` so the client renders the effect at the requested size.
+7. If `OneShot` is false, waits `Definition.Interval` seconds, then loops again.
+8. If `OneShot` is true, the loop exits and the `Completed` event fires.
+
+### Scaling effects
+
+Every `EffectDefinition` property except `Scale` is unchanged from the pre-refactor API. Leaving `Scale` at its default (`null`) preserves the original fast-path emission bit-for-bit, so existing code that doesn't need scaling keeps working without any modification.
+
+To scale an effect, set `Scale` to a `UnityEngine.Vector3` before starting the emitter:
+
+```csharp
+var definition = new EffectDefinition
+{
+    EffectId      = 394,
+    Pattern       = new SinglePointPattern(),
+    Origin        = position,
+    OneShot       = true,
+    Scale         = new Vector3(2.5f, 2.5f, 2.5f),  // 2.5x uniform scale
+};
+
+_effects.Start(definition, new AllPlayersAudience());
+```
+
+When `Scale` is set, the emitter builds a `TriggerEffectParameters`, sets `position`, `reliable = true`, `scale = Definition.Scale.Value`, attaches the recipient list via `SetRelevantTransportConnections`, and calls `EffectManager.triggerEffect`. Non-uniform scale (`new Vector3(1f, 4f, 1f)` for a tall pillar effect, for example) works the same way.
 
 ## 4. Stop an Emitter
 
