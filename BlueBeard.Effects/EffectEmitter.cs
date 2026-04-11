@@ -39,8 +39,26 @@ public class EffectEmitter : MonoBehaviour
                 var position = Definition.Origin + point;
                 if (Definition.SnapToSurface)
                     position = SurfaceHelper.SnapPositionToSurface(position, RayMasks.GROUND);
-                foreach (var connection in recipients)
-                    UnturnedEffectManager.sendEffectReliable(Definition.EffectId, connection, position);
+
+                if (Definition.Scale.HasValue)
+                {
+                    // Scale path: build a TriggerEffectParameters so the client applies the
+                    // requested scale. Recipients are supplied via SetRelevantTransportConnections.
+                    var parameters = new TriggerEffectParameters(Definition.EffectId)
+                    {
+                        position = position,
+                        reliable = true,
+                        scale = Definition.Scale.Value,
+                    };
+                    parameters.SetRelevantTransportConnections(recipients);
+                    UnturnedEffectManager.triggerEffect(parameters);
+                }
+                else
+                {
+                    // Fast path: unchanged from the original implementation.
+                    foreach (var connection in recipients)
+                        UnturnedEffectManager.sendEffectReliable(Definition.EffectId, connection, position);
+                }
             }
             if (!Definition.OneShot) yield return new WaitForSeconds(Definition.Interval);
         } while (!Definition.OneShot);
