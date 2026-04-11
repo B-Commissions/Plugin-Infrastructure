@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>BlueBeard.Cooldowns</RootNamespace>
+    <AssemblyName>BlueBeard.Cooldowns</AssemblyName>
+    <PackageId>BlueBeard.Cooldowns</PackageId>
+    <Description>Centralised cooldown/timer tracking for Unturned plugins. In-memory or database-backed persistence, clock injection for tests.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlueBeard.Core\BlueBeard.Core.csproj" />
+    <ProjectReference Include="..\BlueBeard.Database\BlueBeard.Database.csproj" />
+  </ItemGroup>
+</Project>

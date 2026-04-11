@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>BlueBeard.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlueBeard.Events\BlueBeard.Events.csproj" />
+    <ProjectReference Include="..\BlueBeard.Cooldowns\BlueBeard.Cooldowns.csproj" />
+    <ProjectReference Include="..\BlueBeard.Items\BlueBeard.Items.csproj" />
+  </ItemGroup>
+  <!--
+    Unturned / Rocket / Unity DLLs must be present at test runtime because the libraries
+    under test reference them (directly or transitively via BlueBeard.Core). The library
+    projects reference these with Private="false" so they don't get packaged into NuGet,
+    but the test host needs them on disk. Re-reference them here with Private (default true)
+    so MSBuild copies them to the test output directory.
+  -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp"><HintPath>..\Libs\Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="Rocket.API"><HintPath>..\Libs\Rocket.API.dll</HintPath></Reference>
+    <Reference Include="Rocket.Core"><HintPath>..\Libs\Rocket.Core.dll</HintPath></Reference>
+    <Reference Include="Rocket.Unturned"><HintPath>..\Libs\Rocket.Unturned.dll</HintPath></Reference>
+    <Reference Include="UnityEngine"><HintPath>..\Libs\UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>..\Libs\UnityEngine.PhysicsModule.dll</HintPath></Reference>
+    <Reference Include="SDG.NetTransport"><HintPath>..\Libs\SDG.NetTransport.dll</HintPath></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net"><HintPath>..\Libs\com.rlabrecque.steamworks.net.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>
