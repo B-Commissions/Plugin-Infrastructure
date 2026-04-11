@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>BlueBeard.Events</RootNamespace>
+    <AssemblyName>BlueBeard.Events</AssemblyName>
+    <PackageId>BlueBeard.Events</PackageId>
+    <Description>Generic typed event bus with [Flags] enum masking for efficient subscriber filtering. Publish and subscribe to domain events across plugin code without tight coupling.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlueBeard.Core\BlueBeard.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" Private="false"><HintPath>..\Libs\Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="Rocket.API" Private="false"><HintPath>..\Libs\Rocket.API.dll</HintPath></Reference>
+    <Reference Include="Rocket.Core" Private="false"><HintPath>..\Libs\Rocket.Core.dll</HintPath></Reference>
+    <Reference Include="Rocket.Unturned" Private="false"><HintPath>..\Libs\Rocket.Unturned.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>
