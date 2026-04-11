@@ -6,6 +6,6 @@ namespace BlueBeard.Zones.Builder;
 public class ZoneBuildSession
 {
     public string ZoneId { get; set; }
-    public List<Vector3> Nodes { get; } = new();
+    public List<Vector3> Nodes { get; } = [];
     public float Height { get; set; } = 30f;
 }

@@ -11,8 +11,8 @@ namespace BlueBeard.UI;
 public class UIBuilder
 {
     internal Type DefaultScreenType;
-    internal readonly List<Type> ScreenTypes = new();
-    internal readonly List<Type> DialogTypes = new();
+    internal readonly List<Type> ScreenTypes = [];
+    internal readonly List<Type> DialogTypes = [];
 
     /// <summary>
     /// Register a screen type. The first screen registered is used as the default.

@@ -25,5 +25,5 @@ public class SnapDefinition
     /// <summary>
     /// The attachment points available on this host barricade.
     /// </summary>
-    public List<SnapPoint> SnapPoints { get; set; } = new();
+    public List<SnapPoint> SnapPoints { get; set; } = [];
 }

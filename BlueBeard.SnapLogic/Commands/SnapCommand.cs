@@ -11,11 +11,11 @@ public class SnapCommand : CommandBase
     public override string Name => "snap";
     public override string Help => "SnapLogic debug commands.";
     public override string Syntax => "/snap <dump>";
-    public override List<string> Aliases => new();
-    public override List<string> Permissions => new() { "snap" };
-    public override SubCommand[] Children => new SubCommand[]
-    {
+    public override List<string> Aliases => [];
+    public override List<string> Permissions => ["snap"];
+    public override SubCommand[] Children =>
+    [
         new DumpSubCommand()
-    };
+    ];
 }
 #endif

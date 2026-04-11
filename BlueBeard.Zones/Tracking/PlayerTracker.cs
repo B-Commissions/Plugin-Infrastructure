@@ -41,14 +41,14 @@ public class PlayerTracker : IManager
         var steamId = player.channel.owner.playerID.steamID;
         if (!_playerToZones.TryGetValue(steamId, out var zones))
         {
-            zones = new HashSet<string>();
+            zones = [];
             _playerToZones[steamId] = zones;
         }
         zones.Add(definition.Id);
 
         if (!_zoneToPlayers.TryGetValue(definition.Id, out var players))
         {
-            players = new HashSet<CSteamID>();
+            players = [];
             _zoneToPlayers[definition.Id] = players;
         }
         players.Add(steamId);
@@ -82,7 +82,7 @@ public class PlayerTracker : IManager
     {
         var steamId = player.channel.owner.playerID.steamID;
         if (!_playerToZones.TryGetValue(steamId, out var zoneIds))
-            return new List<ZoneDefinition>();
+            return [];
 
         return zoneIds
             .Select(id => _zoneManager.GetZone(id))

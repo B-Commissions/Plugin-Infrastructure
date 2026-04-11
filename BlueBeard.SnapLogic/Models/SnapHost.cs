@@ -37,7 +37,7 @@ public class SnapHost
     /// <summary>
     /// The snap points available on this host (copied from the definition).
     /// </summary>
-    public List<SnapPoint> SnapPoints { get; set; } = new();
+    public List<SnapPoint> SnapPoints { get; set; } = [];
 
     /// <summary>
     /// The snap radius for this host (copied from the definition).

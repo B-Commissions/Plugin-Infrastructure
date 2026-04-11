@@ -8,7 +8,7 @@ namespace BlueBeard.Database;
 public class SqlWhereVisitor : ExpressionVisitor
 {
     private readonly StringBuilder _sb = new();
-    private readonly List<object> _parameters = new();
+    private readonly List<object> _parameters = [];
     private readonly TableMetadata _metadata;
 
     public string Sql => _sb.ToString();

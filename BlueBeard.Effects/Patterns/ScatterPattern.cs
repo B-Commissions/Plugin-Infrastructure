@@ -13,7 +13,7 @@ public class ScatterPattern : IEffectPattern
 
     public ScatterPattern(Vector3 origin, IEnumerable<Vector3> absolutePositions)
     {
-        _offsets = new List<Vector3>();
+        _offsets = [];
         foreach (var pos in absolutePositions)
         {
             var snapped = SurfaceHelper.SnapPositionToSurface(pos, RayMasks.GROUND | RayMasks.BARRICADE | RayMasks.STRUCTURE);

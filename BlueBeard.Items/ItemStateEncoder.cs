@@ -101,7 +101,7 @@ public static class ItemStateEncoder
         if (maxBytes < 2)
             throw new ArgumentException("maxBytes must be at least 2 to hold the length prefix.", nameof(maxBytes));
 
-        var bytes = value == null ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(value);
+        var bytes = value == null ? [] : Encoding.UTF8.GetBytes(value);
         if (bytes.Length > maxBytes - 2)
             throw new ArgumentException($"Encoded string is {bytes.Length} bytes but only {maxBytes - 2} are available.", nameof(value));
         if (bytes.Length > ushort.MaxValue)

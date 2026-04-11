@@ -27,7 +27,7 @@ public interface IEventBus
 /// </summary>
 public class EventBus<TAction> : IEventBus where TAction : struct, Enum
 {
-    private readonly List<Entry> _entries = new();
+    private readonly List<Entry> _entries = [];
     private long _nextId;
 
     private struct Entry

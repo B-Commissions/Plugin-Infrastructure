@@ -58,7 +58,7 @@ public class JsonZoneRepository : IZoneRepository
     public async Task<List<BlockList>> LoadAllBlockListsAsync()
     {
         var data = await ReadFileAsync();
-        return data.BlockLists ?? new List<BlockList>();
+        return data.BlockLists ?? [];
     }
 
     public async Task SaveBlockListAsync(BlockList blockList)
@@ -125,9 +125,9 @@ public class JsonZoneRepository : IZoneRepository
     private class JsonStorageRoot
     {
         [JsonProperty("zones")]
-        public List<ZoneStorageData> Zones { get; set; } = new();
+        public List<ZoneStorageData> Zones { get; set; } = [];
 
         [JsonProperty("blockLists")]
-        public List<BlockList> BlockLists { get; set; } = new();
+        public List<BlockList> BlockLists { get; set; } = [];
     }
 }

@@ -106,7 +106,7 @@ public class MySqlZoneRepository : IZoneRepository
     {
         var items = !string.IsNullOrEmpty(entity.ItemsJson)
             ? JsonConvert.DeserializeObject<HashSet<ushort>>(entity.ItemsJson)
-            : new HashSet<ushort>();
+            : [];
         return new BlockList { Name = entity.Name, Items = items };
     }
 

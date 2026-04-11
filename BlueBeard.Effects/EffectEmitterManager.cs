@@ -7,7 +7,7 @@ namespace BlueBeard.Effects;
 
 public class EffectEmitterManager : IManager
 {
-    private readonly List<EffectEmitter> _emitters = new();
+    private readonly List<EffectEmitter> _emitters = [];
     public IReadOnlyList<EffectEmitter> Emitters => _emitters;
 
     public void Load() { }

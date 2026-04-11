@@ -13,7 +13,7 @@ public class DatabaseManager : IManager
 {
     private string _connectionString;
     private readonly ConcurrentDictionary<Type, object> _dbSets = new();
-    private readonly List<Type> _entityTypes = new();
+    private readonly List<Type> _entityTypes = [];
     private DatabaseConfig _config;
 
     public void Initialize(ConfigManager configManager) =>

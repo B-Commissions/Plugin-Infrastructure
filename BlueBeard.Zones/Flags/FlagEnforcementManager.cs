@@ -8,7 +8,7 @@ namespace BlueBeard.Zones.Flags;
 
 public class FlagEnforcementManager : IManager
 {
-    private readonly List<IFlagHandler> _handlers = new();
+    private readonly List<IFlagHandler> _handlers = [];
 
     public void Initialize(ZoneManager zoneManager, PlayerTracker playerTracker, BlockListManager blockListManager)
     {

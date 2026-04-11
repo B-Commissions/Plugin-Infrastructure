@@ -255,7 +255,7 @@ public class SnapManager : IManager
             OwnerId = data?.owner ?? 0,
             GroupId = data?.group ?? 0,
             HostDrop = drop,
-            SnapPoints = new List<SnapPoint>(definition.SnapPoints),
+            SnapPoints = [..definition.SnapPoints],
             SnapRadius = definition.SnapRadius
         };
 

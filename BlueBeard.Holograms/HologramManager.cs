@@ -23,12 +23,12 @@ public class HologramManager : IManager
     {
         public Dictionary<HologramDefinition, int> AssignedIndices = new();
         public Dictionary<HologramDefinition, Dictionary<string, string>> Metadata = new();
-        public HashSet<int> UsedIndices = new();
+        public HashSet<int> UsedIndices = [];
     }
 
     private readonly Dictionary<HologramDefinition, RegistrationState> _registrations = new();
     private readonly Dictionary<Player, PlayerState> _players = new();
-    private readonly List<GameObject> _zones = new();
+    private readonly List<GameObject> _zones = [];
 
     public event Action<Player, HologramDefinition> PlayerEnteredHologram;
     public event Action<Player, HologramDefinition> PlayerExitedHologram;
@@ -67,7 +67,7 @@ public class HologramManager : IManager
             state = new RegistrationState
             {
                 Display = display, Pool = pool, IsGlobal = isGlobal,
-                GlobalUsedIndices = isGlobal ? new HashSet<int>() : null,
+                GlobalUsedIndices = isGlobal ? [] : null,
                 PlayerFilter = playerFilter
             };
         }
@@ -109,7 +109,7 @@ public class HologramManager : IManager
         {
             Display = registration.Display, Pool = registration.Holograms,
             IsGlobal = registration.IsGlobal,
-            GlobalUsedIndices = registration.IsGlobal ? new HashSet<int>() : null
+            GlobalUsedIndices = registration.IsGlobal ? [] : null
         };
         foreach (var definition in registration.Definitions)
         { _registrations[definition] = state; CreateZone(definition); }
