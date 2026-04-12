@@ -40,16 +40,20 @@ public class EffectEmitter : MonoBehaviour
                 if (Definition.SnapToSurface)
                     position = SurfaceHelper.SnapPositionToSurface(position, RayMasks.GROUND);
 
-                if (Definition.Scale.HasValue)
+                if (Definition.Scale.HasValue || Definition.Rotation.HasValue)
                 {
-                    // Scale path: build a TriggerEffectParameters so the client applies the
-                    // requested scale. Recipients are supplied via SetRelevantTransportConnections.
+                    // Extended path: build a TriggerEffectParameters so the client applies
+                    // the requested scale and/or rotation. Recipients are supplied via
+                    // SetRelevantTransportConnections.
                     var parameters = new TriggerEffectParameters(Definition.EffectId)
                     {
                         position = position,
                         reliable = true,
-                        scale = Definition.Scale.Value,
                     };
+                    if (Definition.Scale.HasValue)
+                        parameters.scale = Definition.Scale.Value;
+                    if (Definition.Rotation.HasValue)
+                        parameters.SetRotation(Definition.Rotation.Value);
                     parameters.SetRelevantTransportConnections(recipients);
                     UnturnedEffectManager.triggerEffect(parameters);
                 }

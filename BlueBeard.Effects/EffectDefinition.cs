@@ -19,4 +19,11 @@ public class EffectDefinition
     /// <see cref="SDG.Unturned.TriggerEffectParameters"/> so the scale is forwarded to the client.
     /// </summary>
     public Vector3? Scale { get; set; }
+
+    /// <summary>
+    /// Optional world-space rotation applied to every spawned effect. When set, emission uses
+    /// <see cref="SDG.Unturned.TriggerEffectParameters"/> with <c>SetRotation</c> so the
+    /// rotation is forwarded to the client.
+    /// </summary>
+    public Quaternion? Rotation { get; set; }
 }
