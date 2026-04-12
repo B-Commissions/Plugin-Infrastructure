@@ -49,6 +49,7 @@ public class EffectEmitter : MonoBehaviour
                     {
                         position = position,
                         reliable = true,
+                        relevantDistance = Definition.RelevantDistance,
                     };
                     if (Definition.Scale.HasValue)
                         parameters.scale = Definition.Scale.Value;

@@ -26,4 +26,12 @@ public class EffectDefinition
     /// rotation is forwarded to the client.
     /// </summary>
     public Quaternion? Rotation { get; set; }
+
+    /// <summary>
+    /// Maximum distance from the effect origin at which players receive it. Defaults to
+    /// Unturned's built-in 128m. Only applies when emission uses
+    /// <see cref="SDG.Unturned.TriggerEffectParameters"/> (i.e. when <see cref="Scale"/> or
+    /// <see cref="Rotation"/> is set).
+    /// </summary>
+    public float RelevantDistance { get; set; } = 128f;
 }
