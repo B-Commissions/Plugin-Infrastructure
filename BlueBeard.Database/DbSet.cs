@@ -149,16 +149,21 @@ public class DbSet<T> where T : new()
 
     private static object ReadValue(IDataReader reader, int ordinal, Type targetType)
     {
-        if (targetType == typeof(ulong)) return ((MySqlDataReader)reader).GetUInt64(ordinal);
-        if (targetType == typeof(bool)) return reader.GetBoolean(ordinal);
-        if (targetType == typeof(int)) return reader.GetInt32(ordinal);
-        if (targetType == typeof(long)) return reader.GetInt64(ordinal);
-        if (targetType == typeof(float)) return reader.GetFloat(ordinal);
-        if (targetType == typeof(double)) return reader.GetDouble(ordinal);
-        if (targetType == typeof(string)) return reader.GetString(ordinal);
-        if (targetType == typeof(DateTime)) return reader.GetDateTime(ordinal);
-        var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
-        if (underlying.IsEnum) return Enum.ToObject(underlying, reader.GetInt32(ordinal));
-        return Convert.ChangeType(reader.GetValue(ordinal), targetType);
+        // Unwrap Nullable<T> up front so every check below matches both T and T?.
+        // The caller (ReadAllAsync) already handles DBNull by skipping ReadValue entirely,
+        // so we only reach here for non-NULL values. Boxing a T and assigning it to a T?
+        // property via PropertyInfo.SetValue works via implicit boxing conversion.
+        var type = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+        if (type == typeof(ulong)) return ((MySqlDataReader)reader).GetUInt64(ordinal);
+        if (type == typeof(bool)) return reader.GetBoolean(ordinal);
+        if (type == typeof(int)) return reader.GetInt32(ordinal);
+        if (type == typeof(long)) return reader.GetInt64(ordinal);
+        if (type == typeof(float)) return reader.GetFloat(ordinal);
+        if (type == typeof(double)) return reader.GetDouble(ordinal);
+        if (type == typeof(string)) return reader.GetString(ordinal);
+        if (type == typeof(DateTime)) return reader.GetDateTime(ordinal);
+        if (type.IsEnum) return Enum.ToObject(type, reader.GetInt32(ordinal));
+        return Convert.ChangeType(reader.GetValue(ordinal), type);
     }
 }
