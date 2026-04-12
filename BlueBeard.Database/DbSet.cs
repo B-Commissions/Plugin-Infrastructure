@@ -157,6 +157,8 @@ public class DbSet<T> where T : new()
         if (targetType == typeof(double)) return reader.GetDouble(ordinal);
         if (targetType == typeof(string)) return reader.GetString(ordinal);
         if (targetType == typeof(DateTime)) return reader.GetDateTime(ordinal);
+        var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        if (underlying.IsEnum) return Enum.ToObject(underlying, reader.GetInt32(ordinal));
         return Convert.ChangeType(reader.GetValue(ordinal), targetType);
     }
 }
