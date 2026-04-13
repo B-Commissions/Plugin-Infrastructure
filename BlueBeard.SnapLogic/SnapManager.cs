@@ -23,6 +23,7 @@ public class SnapManager : IManager
     private readonly Dictionary<uint, SnapHost> _childToHost = new();
 
     private SnapLogicConfig _config;
+    private GameObject _watchObj;
 
     /// <summary>
     /// Fired when a barricade is snapped to a point on a host.
@@ -86,6 +87,10 @@ public class SnapManager : IManager
 
         BarricadeManager.onBarricadeSpawned += OnBarricadeSpawned;
         BarricadeDrop.OnSalvageRequested_Global += OnSalvageRequested;
+
+        _watchObj = new GameObject("BlueBeard_SnapManager_Watch");
+        UnityEngine.Object.DontDestroyOnLoad(_watchObj);
+        _watchObj.AddComponent<DestructionWatcher>().Init(this);
     }
 
     public void Unload()
@@ -93,8 +98,53 @@ public class SnapManager : IManager
         BarricadeManager.onBarricadeSpawned -= OnBarricadeSpawned;
         BarricadeDrop.OnSalvageRequested_Global -= OnSalvageRequested;
 
+        if (_watchObj != null) UnityEngine.Object.Destroy(_watchObj);
+        _watchObj = null;
+
         _hosts.Clear();
         _childToHost.Clear();
+    }
+
+    /// <summary>
+    /// Scans all tracked child attachments and unsnaps any whose backing
+    /// <see cref="BarricadeDrop"/> has been destroyed in the world (gunfire,
+    /// explosions, decay, etc.). Invoked at ~1 Hz by <see cref="DestructionWatcher"/>.
+    /// </summary>
+    internal void ScanForDestroyedChildren()
+    {
+        // Snapshot keys so Unsnap() can mutate _childToHost during iteration.
+        foreach (var pair in _childToHost.ToList())
+        {
+            var host = pair.Value;
+            var attach = host.Attachments.Values.FirstOrDefault(a => a.InstanceId == pair.Key);
+            if (attach == null)
+            {
+                _childToHost.Remove(pair.Key);
+                continue;
+            }
+            if (attach.Drop?.model != null) continue;
+
+            var pointName = host.Attachments.FirstOrDefault(kv => kv.Value.InstanceId == pair.Key).Key;
+            if (pointName != null) Unsnap(host, pointName);
+            else _childToHost.Remove(pair.Key);
+        }
+    }
+
+    private sealed class DestructionWatcher : MonoBehaviour
+    {
+        private SnapManager _mgr;
+        private float _accum;
+
+        public void Init(SnapManager mgr) => _mgr = mgr;
+
+        private void Update()
+        {
+            if (_mgr == null) return;
+            _accum += Time.deltaTime;
+            if (_accum < 1f) return;
+            _accum = 0f;
+            try { _mgr.ScanForDestroyedChildren(); } catch { /* swallow per-tick exceptions */ }
+        }
     }
 
     /// <summary>
@@ -295,10 +345,20 @@ public class SnapManager : IManager
 
         var instanceId = drop.instanceID;
 
-        // If this is a snapped child, block salvage
+        // If this is a snapped child, honour the parent's AllowChildSalvage flag.
         if (_childToHost.TryGetValue(instanceId, out var parentHost))
         {
-            shouldAllow = false;
+            var def = _definitions.TryGetValue(parentHost.DefinitionId, out var d) ? d : null;
+            if (def == null || !def.AllowChildSalvage)
+            {
+                shouldAllow = false;
+                return;
+            }
+
+            // Allow salvage AND route through Unsnap so OnItemUnsnapped fires for listeners.
+            var pointName = parentHost.Attachments
+                .FirstOrDefault(kv => kv.Value.InstanceId == instanceId).Key;
+            if (pointName != null) Unsnap(parentHost, pointName);
             return;
         }
 

@@ -26,4 +26,12 @@ public class SnapDefinition
     /// The attachment points available on this host barricade.
     /// </summary>
     public List<SnapPoint> SnapPoints { get; set; } = [];
+
+    /// <summary>
+    /// When true, players are allowed to salvage barricades snapped to this host.
+    /// Salvage fires <see cref="SnapManager.OnItemUnsnapped"/> as it removes the
+    /// attachment, so listeners can react. When false (default), salvage of snapped
+    /// children is blocked.
+    /// </summary>
+    public bool AllowChildSalvage { get; set; } = false;
 }
