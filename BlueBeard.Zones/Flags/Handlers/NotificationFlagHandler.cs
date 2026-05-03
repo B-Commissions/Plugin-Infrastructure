@@ -5,11 +5,8 @@ using UnityEngine;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class NotificationFlagHandler : FlagHandlerBase
+public class NotificationFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker) : FlagHandlerBase(zoneManager, playerTracker)
 {
-    public NotificationFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker)
-        : base(zoneManager, playerTracker) { }
-
     public override string FlagName => "notification";
 
     public override void Subscribe()

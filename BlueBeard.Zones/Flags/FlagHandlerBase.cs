@@ -6,16 +6,10 @@ using UnityEngine;
 
 namespace BlueBeard.Zones.Flags;
 
-public abstract class FlagHandlerBase : IFlagHandler
+public abstract class FlagHandlerBase(ZoneManager zoneManager, PlayerTracker playerTracker) : IFlagHandler
 {
-    protected readonly PlayerTracker PlayerTracker;
-    protected readonly ZoneManager ZoneManager;
-
-    protected FlagHandlerBase(ZoneManager zoneManager, PlayerTracker playerTracker)
-    {
-        ZoneManager = zoneManager;
-        PlayerTracker = playerTracker;
-    }
+    protected readonly PlayerTracker PlayerTracker = playerTracker;
+    protected readonly ZoneManager ZoneManager = zoneManager;
 
     public abstract string FlagName { get; }
     public abstract void Subscribe();

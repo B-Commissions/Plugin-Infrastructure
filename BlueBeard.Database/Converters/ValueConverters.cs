@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
-using System.ComponentModel;
 
 namespace BlueBeard.Database.Converters;
 
@@ -17,6 +16,7 @@ public static class ValueConverters
     }
 
     public static void Register(IValueConverter c) => _byClrType[c.ClrType] = c;
+
     public static bool TryGet(Type clrType, out IValueConverter c) =>
         _byClrType.TryGetValue(Nullable.GetUnderlyingType(clrType) ?? clrType, out c);
 }

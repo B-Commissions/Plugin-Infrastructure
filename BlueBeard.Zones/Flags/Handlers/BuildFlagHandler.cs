@@ -6,16 +6,8 @@ using UnityEngine;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class BuildFlagHandler : FlagHandlerBase
+public class BuildFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker, BlockListManager blockListManager) : FlagHandlerBase(zoneManager, playerTracker)
 {
-    private readonly BlockListManager _blockListManager;
-
-    public BuildFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker, BlockListManager blockListManager)
-        : base(zoneManager, playerTracker)
-    {
-        _blockListManager = blockListManager;
-    }
-
     public override string FlagName => ZoneFlag.NoBuild;
 
     public override void Subscribe()
@@ -42,7 +34,7 @@ public class BuildFlagHandler : FlagHandlerBase
             // If flag value is a block list name, only block items in that list
             if (!string.IsNullOrEmpty(flagValue))
             {
-                if (!_blockListManager.IsItemInBlockList(flagValue, asset.id))
+                if (!blockListManager.IsItemInBlockList(flagValue, asset.id))
                     return; // Item not in block list, allow
             }
 
@@ -61,7 +53,7 @@ public class BuildFlagHandler : FlagHandlerBase
 
             if (!string.IsNullOrEmpty(flagValue))
             {
-                if (!_blockListManager.IsItemInBlockList(flagValue, asset.id))
+                if (!blockListManager.IsItemInBlockList(flagValue, asset.id))
                     return;
             }
 

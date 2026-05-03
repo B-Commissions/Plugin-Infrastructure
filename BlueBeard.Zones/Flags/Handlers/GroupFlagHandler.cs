@@ -4,11 +4,8 @@ using SDG.Unturned;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class GroupFlagHandler : FlagHandlerBase
+public class GroupFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker) : FlagHandlerBase(zoneManager, playerTracker)
 {
-    public GroupFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker)
-        : base(zoneManager, playerTracker) { }
-
     public override string FlagName => "group";
 
     public override void Subscribe()

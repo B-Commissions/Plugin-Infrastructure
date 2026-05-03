@@ -6,37 +6,25 @@ using UnityEngine;
 
 namespace BlueBeard.Core.Commands;
 
-public class SubCommandGroup : SubCommand
+public class SubCommandGroup(string name, string[] aliases, string permission, SubCommand[] children)
+    : SubCommand
 {
-    private readonly string _name;
-    private readonly string[] _aliases;
-    private readonly string _permission;
-    private readonly SubCommand[] _children;
-
-    public SubCommandGroup(string name, string[] aliases, string permission, SubCommand[] children)
-    {
-        _name = name;
-        _aliases = aliases;
-        _permission = permission;
-        _children = children;
-    }
-
-    public override string Name => _name;
-    public override string[] Aliases => _aliases;
-    public override string Permission => _permission;
-    public override string Help => $"Manage {_name}s";
-    public override string Syntax => string.Join(" | ", _children.Select(c => c.Name));
+    public override string Name => name;
+    public override string[] Aliases => aliases;
+    public override string Permission => permission;
+    public override string Help => $"Manage {name}s";
+    public override string Syntax => string.Join(" | ", children.Select(c => c.Name));
 
     public override async Task Execute(IRocketPlayer caller, string[] args)
     {
         if (args.Length == 0)
         {
-            CommandBase.Reply(caller, $"Usage: {_name} <{Syntax}>", Color.yellow);
+            CommandBase.Reply(caller, $"Usage: {name} <{Syntax}>", Color.yellow);
             return;
         }
 
         var token = args[0];
-        var child = _children.FirstOrDefault(c => c.Matches(token));
+        var child = children.FirstOrDefault(c => c.Matches(token));
 
         if (child == null)
         {

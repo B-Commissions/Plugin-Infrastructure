@@ -7,14 +7,11 @@ using UnityEngine;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class EnvironmentFlagHandler : FlagHandlerBase
+public class EnvironmentFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker) : FlagHandlerBase(zoneManager, playerTracker)
 {
     private Coroutine _zombieCleanupCoroutine;
     private Coroutine _generatorRefuelCoroutine;
     private GameObject _coroutineHost;
-
-    public EnvironmentFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker)
-        : base(zoneManager, playerTracker) { }
 
     public override string FlagName => "environment";
 

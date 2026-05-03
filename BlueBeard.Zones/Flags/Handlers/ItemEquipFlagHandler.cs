@@ -4,16 +4,8 @@ using SDG.Unturned;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class ItemEquipFlagHandler : FlagHandlerBase
+public class ItemEquipFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker, BlockListManager blockListManager) : FlagHandlerBase(zoneManager, playerTracker)
 {
-    private readonly BlockListManager _blockListManager;
-
-    public ItemEquipFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker, BlockListManager blockListManager)
-        : base(zoneManager, playerTracker)
-    {
-        _blockListManager = blockListManager;
-    }
-
     public override string FlagName => ZoneFlag.NoItemEquip;
 
     public override void Subscribe()
@@ -40,7 +32,7 @@ public class ItemEquipFlagHandler : FlagHandlerBase
 
         if (!string.IsNullOrEmpty(flagValue))
         {
-            if (!_blockListManager.IsItemInBlockList(flagValue, equipment.asset.id))
+            if (!blockListManager.IsItemInBlockList(flagValue, equipment.asset.id))
                 return;
         }
 

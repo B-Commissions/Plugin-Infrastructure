@@ -6,11 +6,8 @@ using UnityEngine;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class AccessFlagHandler : FlagHandlerBase
+public class AccessFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker) : FlagHandlerBase(zoneManager, playerTracker)
 {
-    public AccessFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker)
-        : base(zoneManager, playerTracker) { }
-
     public override string FlagName => "access";
 
     public override void Subscribe()

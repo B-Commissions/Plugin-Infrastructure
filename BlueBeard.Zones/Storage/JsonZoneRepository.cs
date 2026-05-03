@@ -8,15 +8,10 @@ using Newtonsoft.Json;
 
 namespace BlueBeard.Zones.Storage;
 
-public class JsonZoneRepository : IZoneRepository
+public class JsonZoneRepository(string pluginDirectory) : IZoneRepository
 {
-    private readonly string _filePath;
+    private readonly string _filePath = Path.Combine(pluginDirectory, "zones.json");
     private readonly SemaphoreSlim _lock = new(1, 1);
-
-    public JsonZoneRepository(string pluginDirectory)
-    {
-        _filePath = Path.Combine(pluginDirectory, "zones.json");
-    }
 
     public async Task<List<ZoneDefinition>> LoadAllAsync()
     {

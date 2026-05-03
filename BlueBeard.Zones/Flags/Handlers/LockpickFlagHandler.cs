@@ -3,11 +3,8 @@ using SDG.Unturned;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class LockpickFlagHandler : FlagHandlerBase
+public class LockpickFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker) : FlagHandlerBase(zoneManager, playerTracker)
 {
-    public LockpickFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker)
-        : base(zoneManager, playerTracker) { }
-
     public override string FlagName => ZoneFlag.NoLockpick;
 
     public override void Subscribe()

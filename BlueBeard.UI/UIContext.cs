@@ -3,18 +3,10 @@ using SDG.NetTransport;
 
 namespace BlueBeard.UI;
 
-public class UIContext
+public class UIContext(UnturnedPlayer player, ITransportConnection connection, short effectKey, UIPlayerComponent component)
 {
-    public UnturnedPlayer Player { get; }
-    public ITransportConnection Connection { get; }
-    public short EffectKey { get; }
-    public UIPlayerComponent Component { get; }
-
-    public UIContext(UnturnedPlayer player, ITransportConnection connection, short effectKey, UIPlayerComponent component)
-    {
-        Player = player;
-        Connection = connection;
-        EffectKey = effectKey;
-        Component = component;
-    }
+    public UnturnedPlayer Player { get; } = player;
+    public ITransportConnection Connection { get; } = connection;
+    public short EffectKey { get; } = effectKey;
+    public UIPlayerComponent Component { get; } = component;
 }

@@ -2,22 +2,17 @@ using UnityEngine;
 
 namespace BlueBeard.Zones.Shapes;
 
-public class RadiusZoneShape : IZoneShape
+public class RadiusZoneShape(float radius, float height) : IZoneShape
 {
-    private readonly float _radius;
-    private readonly float _height;
-
     public string ShapeType => "radius";
-    public float Radius => _radius;
-    public float Height => _height;
-
-    public RadiusZoneShape(float radius, float height) { _radius = radius; _height = height; }
+    public float Radius => radius;
+    public float Height => height;
 
     public void ApplyCollider(GameObject gameObject)
     {
         var collider = gameObject.AddComponent<CapsuleCollider>();
         collider.isTrigger = true;
-        collider.radius = _radius;
-        collider.height = _height;
+        collider.radius = radius;
+        collider.height = height;
     }
 }

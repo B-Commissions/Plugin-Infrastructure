@@ -16,17 +16,12 @@ namespace BlueBeard.Cooldowns;
 /// The clock used for expiry comparisons can be injected via the constructor (for tests);
 /// defaults to <see cref="DateTime.UtcNow"/>.
 /// </summary>
-public class CooldownManager : IManager
+public class CooldownManager(Func<DateTime> utcNow) : IManager
 {
     private readonly Dictionary<string, DateTime> _cooldowns = new();
-    private readonly Func<DateTime> _utcNow;
+    private readonly Func<DateTime> _utcNow = utcNow ?? (() => DateTime.UtcNow);
 
     public CooldownManager() : this(null) { }
-
-    public CooldownManager(Func<DateTime> utcNow)
-    {
-        _utcNow = utcNow ?? (() => DateTime.UtcNow);
-    }
 
     /// <summary>Start or overwrite a cooldown lasting <paramref name="durationSeconds"/>.</summary>
     public virtual void Start(string key, float durationSeconds)

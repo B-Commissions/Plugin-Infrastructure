@@ -4,11 +4,8 @@ using UnturnedEffectManager = SDG.Unturned.EffectManager;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class EffectFlagHandler : FlagHandlerBase
+public class EffectFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker) : FlagHandlerBase(zoneManager, playerTracker)
 {
-    public EffectFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker)
-        : base(zoneManager, playerTracker) { }
-
     public override string FlagName => "effect";
 
     public override void Subscribe()

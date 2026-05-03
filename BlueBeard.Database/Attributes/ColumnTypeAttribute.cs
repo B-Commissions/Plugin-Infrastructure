@@ -3,8 +3,7 @@ using System;
 namespace BlueBeard.Database.Attributes;
 
 [AttributeUsage(AttributeTargets.Property)]
-public class ColumnTypeAttribute : Attribute
+public class ColumnTypeAttribute(string sqlType) : Attribute
 {
-    public string SqlType { get; }
-    public ColumnTypeAttribute(string sqlType) { SqlType = sqlType; }
+    public string SqlType { get; } = sqlType;
 }

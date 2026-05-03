@@ -5,11 +5,8 @@ using UnityEngine;
 
 namespace BlueBeard.Zones.Flags.Handlers;
 
-public class DamageFlagHandler : FlagHandlerBase
+public class DamageFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker) : FlagHandlerBase(zoneManager, playerTracker)
 {
-    public DamageFlagHandler(ZoneManager zoneManager, PlayerTracker playerTracker)
-        : base(zoneManager, playerTracker) { }
-
     public override string FlagName => "damage";
 
     public override void Subscribe()

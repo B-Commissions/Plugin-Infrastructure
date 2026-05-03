@@ -19,7 +19,7 @@ public class EventContext<TAction> where TAction : struct, Enum
     public Player Player { get; set; }
 
     /// <summary>UTC timestamp at which the event was constructed.</summary>
-    public DateTime Timestamp { get; }
+    public DateTime Timestamp { get; } = DateTime.UtcNow;
 
     /// <summary>Arbitrary key-value payload for domain-specific data.</summary>
     public Dictionary<string, object> Data { get; } = new();
@@ -30,9 +30,4 @@ public class EventContext<TAction> where TAction : struct, Enum
     /// to proceed with the associated action.
     /// </summary>
     public bool Cancelled { get; set; }
-
-    public EventContext()
-    {
-        Timestamp = DateTime.UtcNow;
-    }
 }
