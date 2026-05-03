@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BlueBeard.Database.Attributes;
+using BlueBeard.Database.Converters;
 
 namespace BlueBeard.Database;
 
@@ -16,6 +17,8 @@ public class ColumnInfo
     public bool IsAutoIncrement { get; set; }
     public string OverrideSqlType { get; set; }
     public PropertyInfo PropertyInfo { get; set; }
+
+    public IValueConverter Converter {get; set;}
 }
 
 public class TableMetadata
@@ -47,6 +50,17 @@ public class TableMetadata
                 var colAttr = prop.GetCustomAttribute<ColumnAttribute>();
                 var colName = colAttr?.Name ?? prop.Name;
                 var colTypeAttr = prop.GetCustomAttribute<ColumnTypeAttribute>();
+                var converterAttr = prop.GetCustomAttribute<ColumnConverterAttribute>();
+                IValueConverter converter;
+                if (converterAttr != null)
+                {
+                    converter = (IValueConverter)Activator.CreateInstance(converterAttr.ConverterType);
+                }
+                else
+                {
+                    ValueConverters.TryGet(prop.PropertyType, out converter);
+                }
+
                 columns.Add(new ColumnInfo
                 {
                     PropertyName = prop.Name,
@@ -55,7 +69,8 @@ public class TableMetadata
                     IsPrimaryKey = prop.GetCustomAttribute<PrimaryKeyAttribute>() != null,
                     IsAutoIncrement = prop.GetCustomAttribute<AutoIncrementAttribute>() != null,
                     OverrideSqlType = colTypeAttr?.SqlType,
-                    PropertyInfo = prop
+                    PropertyInfo = prop,
+                    Converter = converter
                 });
             }
             return new TableMetadata(tableName, columns);

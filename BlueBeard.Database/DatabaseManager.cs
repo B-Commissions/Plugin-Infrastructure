@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using BlueBeard.Core;
 using BlueBeard.Core.Configs;
 using BlueBeard.Core.Helpers;
@@ -76,4 +77,11 @@ public class DatabaseManager : IManager
 
     private MySqlConnection CreateConnection() =>
         new(_connectionString);
+
+    public async Task<TResult> WithConnectionAsync<TResult>(Func<MySqlConnection, Task<TResult>> action)
+    {
+        using var conn = CreateConnection();
+        await conn.OpenAsync();
+        return await action(conn);
+    }
 }

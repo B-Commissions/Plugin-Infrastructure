@@ -37,12 +37,21 @@ public static class SchemaSync
     }
 
     private static string GetSqlType(ColumnInfo col)
-    {
-        if (!string.IsNullOrEmpty(col.OverrideSqlType)) return col.OverrideSqlType;
-        var type = Nullable.GetUnderlyingType(col.ClrType) ?? col.ClrType;
-        if (TypeMap.TryGetValue(type, out var sqlType))
-            return Nullable.GetUnderlyingType(col.ClrType) != null ? sqlType + " NULL" : sqlType;
-        if (type.IsEnum) return "INT";
-        throw new NotSupportedException($"CLR type '{type.FullName}' has no SQL mapping.");
-    }
+     {
+         if (!string.IsNullOrEmpty(col.OverrideSqlType))
+             return col.OverrideSqlType;
+         if (col.Converter != null)
+             return Nullable.GetUnderlyingType(col.ClrType) != null
+                 ? col.Converter.DefaultSqlType + " NULL"
+                 : col.Converter.DefaultSqlType;
+
+         var type = Nullable.GetUnderlyingType(col.ClrType) ?? col.ClrType;
+         if (TypeMap.TryGetValue(type, out var sqlType))
+             return Nullable.GetUnderlyingType(col.ClrType) != null ? sqlType + " NULL" : sqlType;
+
+         if (type.IsEnum)
+             return "INT";
+
+         throw new NotSupportedException($"CLR type '{type.FullName}' has no SQL mapping.");
+     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading.Tasks;
 using MySqlConnector;
 
@@ -27,6 +28,29 @@ public class DbSet<T> where T : new()
         using var cmd = new MySqlCommand(sql, conn);
         using var reader = await cmd.ExecuteReaderAsync();
         return await ReadAllAsync(reader);
+    }
+
+    // Hydrate entities from arbitrary SELECT — joins, LIKE, anything the visitor can't do
+    public async Task<List<T>> QuerySqlAsync(string sql, params (string name, object value)[] parameters)
+    {
+        using var conn = _connectionFactory();
+        await conn.OpenAsync();
+        using var cmd = new MySqlCommand(sql, conn);
+        foreach (var (n, v) in parameters)
+            cmd.Parameters.AddWithValue(n, v ?? DBNull.Value);
+        using var reader = await cmd.ExecuteReaderAsync();
+        return await ReadAllAsync(reader);
+    }
+
+    // Non-query (UPDATE/DELETE/DDL/etc) returning rows-affected
+    public async Task<int> ExecuteSqlAsync(string sql, params (string name, object value)[] parameters)
+    {
+        using var conn = _connectionFactory();
+        await conn.OpenAsync();
+        using var cmd = new MySqlCommand(sql, conn);
+        foreach (var (n, v) in parameters)
+            cmd.Parameters.AddWithValue(n, v ?? DBNull.Value);
+        return await cmd.ExecuteNonQueryAsync();
     }
 
     public async Task<List<T>> Where(Expression<Func<T, bool>> predicate)
@@ -67,14 +91,21 @@ public class DbSet<T> where T : new()
         {
             var col = insertCols[i];
             var value = col.PropertyInfo.GetValue(entity);
-            cmd.Parameters.AddWithValue($"@p{i}", value ?? DBNull.Value);
+            cmd.Parameters.AddWithValue($"@p{i}", ToParameter(col, value));
         }
+
         var lastId = await cmd.ExecuteScalarAsync();
         if (_metadata.PrimaryKey is { IsAutoIncrement: true } pk && lastId != null)
         {
             var id = Convert.ChangeType(lastId, pk.ClrType);
             pk.PropertyInfo.SetValue(entity, id);
         }
+    }
+
+    private static object ToParameter(ColumnInfo col, object clrValue)
+    {
+        if (clrValue == null) return DBNull.Value;
+        return col.Converter != null ? col.Converter.ToProvider(clrValue) : clrValue;
     }
 
     public async Task UpdateAsync(T entity)
@@ -90,9 +121,11 @@ public class DbSet<T> where T : new()
         using var cmd = new MySqlCommand(sql, conn);
         for (var i = 0; i < updateCols.Count; i++)
         {
-            var value = updateCols[i].PropertyInfo.GetValue(entity);
-            cmd.Parameters.AddWithValue($"@p{i}", value ?? DBNull.Value);
+            var col = updateCols[i];
+            var value = col.PropertyInfo.GetValue(entity);
+            cmd.Parameters.AddWithValue($"@p{i}", ToParameter(col, value));
         }
+
         cmd.Parameters.AddWithValue($"@p{pkParamIndex}", _metadata.PrimaryKey.PropertyInfo.GetValue(entity));
         await cmd.ExecuteNonQueryAsync();
     }
@@ -139,31 +172,44 @@ public class DbSet<T> where T : new()
             {
                 if (!ordinalMap.TryGetValue(col.ColumnName, out var ordinal)) continue;
                 if (reader.IsDBNull(ordinal)) continue;
-                var value = ReadValue(reader, ordinal, col.ClrType);
+                var value = ReadValue(reader, ordinal, col);
                 col.PropertyInfo.SetValue(entity, value);
             }
+
             results.Add(entity);
         }
+
         return results;
     }
 
-    private static object ReadValue(IDataReader reader, int ordinal, Type targetType)
+    private static object ReadValue(IDataReader reader, int ordinal, ColumnInfo col)
     {
+        if (col.Converter != null)
+            return col.Converter.FromProvider(reader.GetValue(ordinal));
+
         // Unwrap Nullable<T> up front so every check below matches both T and T?.
         // The caller (ReadAllAsync) already handles DBNull by skipping ReadValue entirely,
         // so we only reach here for non-NULL values. Boxing a T and assigning it to a T?
         // property via PropertyInfo.SetValue works via implicit boxing conversion.
-        var type = Nullable.GetUnderlyingType(targetType) ?? targetType;
-
-        if (type == typeof(ulong)) return ((MySqlDataReader)reader).GetUInt64(ordinal);
-        if (type == typeof(bool)) return reader.GetBoolean(ordinal);
-        if (type == typeof(int)) return reader.GetInt32(ordinal);
-        if (type == typeof(long)) return reader.GetInt64(ordinal);
-        if (type == typeof(float)) return reader.GetFloat(ordinal);
-        if (type == typeof(double)) return reader.GetDouble(ordinal);
-        if (type == typeof(string)) return reader.GetString(ordinal);
-        if (type == typeof(DateTime)) return reader.GetDateTime(ordinal);
-        if (type.IsEnum) return Enum.ToObject(type, reader.GetInt32(ordinal));
-        return Convert.ChangeType(reader.GetValue(ordinal), type);
+        var type = Nullable.GetUnderlyingType(col.ClrType) ?? col.ClrType;
+        try
+        {
+            if (type == typeof(ulong)) return ((MySqlDataReader)reader).GetUInt64(ordinal);
+            if (type == typeof(bool)) return reader.GetBoolean(ordinal);
+            if (type == typeof(int)) return reader.GetInt32(ordinal);
+            if (type == typeof(long)) return reader.GetInt64(ordinal);
+            if (type == typeof(float)) return reader.GetFloat(ordinal);
+            if (type == typeof(double)) return reader.GetDouble(ordinal);
+            if (type == typeof(string)) return reader.GetString(ordinal);
+            if (type == typeof(DateTime)) return reader.GetDateTime(ordinal);
+            return type.IsEnum ? Enum.ToObject(type, reader.GetInt32(ordinal)) : Convert.ChangeType(reader.GetValue(ordinal), type);
+        }
+        catch (InvalidCastException)
+        {
+            // tolerant fallback — typed getter disagreed with column shape
+            var raw = reader.GetValue(ordinal);
+            if (type == typeof(string)) return raw is byte[] b ? Encoding.UTF8.GetString(b) : raw.ToString();
+            return Convert.ChangeType(raw, type);
+        }
     }
 }
