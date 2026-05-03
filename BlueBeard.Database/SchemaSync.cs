@@ -10,13 +10,18 @@ public static class SchemaSync
 {
     private static readonly Dictionary<Type, string> TypeMap = new()
     {
-        { typeof(int), "INT" },
-        { typeof(long), "BIGINT" },
-        { typeof(ulong), "BIGINT UNSIGNED" },
-        { typeof(string), "VARCHAR(255)" },
-        { typeof(bool), "TINYINT(1)" },
-        { typeof(float), "FLOAT" },
-        { typeof(double), "DOUBLE" },
+        { typeof(byte),     "TINYINT UNSIGNED" },
+        { typeof(sbyte),    "TINYINT" },
+        { typeof(short),    "SMALLINT" },
+        { typeof(ushort),   "SMALLINT UNSIGNED" },
+        { typeof(int),      "INT" },
+        { typeof(uint),     "INT UNSIGNED" },
+        { typeof(long),     "BIGINT" },
+        { typeof(ulong),    "BIGINT UNSIGNED" },
+        { typeof(string),   "VARCHAR(255)" },
+        { typeof(bool),     "TINYINT(1)" },
+        { typeof(float),    "FLOAT" },
+        { typeof(double),   "DOUBLE" },
         { typeof(DateTime), "DATETIME" }
     };
 
