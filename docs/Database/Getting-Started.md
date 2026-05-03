@@ -61,9 +61,10 @@ public class MyPlugin : RocketPlugin<MyPluginConfig>
         _databaseManager = new DatabaseManager();
         _databaseManager.Initialize(_configManager);
 
-        // 4. Register all entity types BEFORE calling Load
+        // 4. Register all entity types BEFORE calling Load.
+        //    Optional MigrationMode controls how existing tables are handled — see Migrations.
         _databaseManager.RegisterEntity<PlayerData>();
-        _databaseManager.RegisterEntity<Faction>();
+        _databaseManager.RegisterEntity<Faction>(MigrationMode.Update);
 
         // 5. Load -- builds the connection string and syncs schema
         _databaseManager.Load();
@@ -80,7 +81,11 @@ public class MyPlugin : RocketPlugin<MyPluginConfig>
 
 1. `GetConfig<DatabaseConfig>()` retrieves the loaded config.
 2. A `MySqlConnectionStringBuilder` builds the connection string from the config values.
-3. `SyncSchema()` runs on a **background thread** via `ThreadHelper.RunAsynchronously`. For every registered entity type, it generates a `CREATE TABLE IF NOT EXISTS` statement and executes it. Each successful table creation is logged as `[Database] Ensured table: <table_name>`.
+3. `SyncSchema()` runs on a **background thread** via `ThreadHelper.RunAsynchronously`. For every registered entity type, it applies the entity's `MigrationMode` — at minimum running `CREATE TABLE IF NOT EXISTS`, optionally also adding/modifying columns. Each operation is logged.
+
+### Registration order matters with foreign keys
+
+If your entities use `[ForeignKey]`, the referenced table must already exist when the dependent table is created. **Register parent entities before children.** See [Relationships](Relationships) for details.
 
 ### What happens during Unload()
 

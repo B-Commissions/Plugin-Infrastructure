@@ -20,7 +20,10 @@
 - [Overview](Database-Home)
 - [Getting Started](Database-Getting-Started)
 - [Entities](Database-Entities)
+- [Relationships](Database-Relationships)
 - [Queries](Database-Queries)
+- [Migrations](Database-Migrations)
+- [Converters](Database-Converters)
 - [Examples](Database-Examples)
 
 ### Effects

@@ -1,15 +1,16 @@
 # Examples
 
-This page shows a complete plugin implementation that uses BlueBeard.Database for persistent faction and member management.
+This page shows complete plugin implementations using BlueBeard.Database.
 
 ---
 
 ## Entity Definitions
 
-### Faction
+### Faction (with HasMany)
 
 ```csharp
 using System;
+using System.Collections.Generic;
 using BlueBeard.Database.Attributes;
 
 [Table("factions")]
@@ -19,6 +20,9 @@ public class Faction
     [AutoIncrement]
     [Column("id")]
     public int Id { get; set; }
+
+    [Column("public_id")]
+    public Guid PublicId { get; set; }   // CHAR(36) via auto-registered GuidConverter
 
     [Column("name")]
     public string Name { get; set; }
@@ -38,6 +42,10 @@ public class Faction
     [ColumnType("TEXT")]
     [Column("description")]
     public string Description { get; set; }
+
+    // Auto-populated when a Faction is loaded
+    [HasMany(nameof(Member.FactionId))]
+    public List<Member> Members { get; set; }
 }
 
 public enum FactionStatus
@@ -48,13 +56,13 @@ public enum FactionStatus
 }
 ```
 
-### Member
+### Member (with ForeignKey + BelongsTo)
 
 ```csharp
 using System;
 using BlueBeard.Database.Attributes;
 
-[Table("faction_members")]
+[Table("members")]
 public class Member
 {
     [PrimaryKey]
@@ -63,7 +71,12 @@ public class Member
     public int Id { get; set; }
 
     [Column("faction_id")]
+    [ForeignKey(typeof(Faction), nameof(Faction.Id), OnDelete = ReferentialAction.Cascade)]
     public int FactionId { get; set; }
+
+    // Auto-populated when a Member is loaded
+    [BelongsTo(nameof(FactionId))]
+    public Faction Faction { get; set; }
 
     [Column("steam_id")]
     public ulong SteamId { get; set; }
@@ -105,16 +118,18 @@ public class FactionPlugin : RocketPlugin
     {
         Instance = this;
 
-        // Config
         _configManager = new ConfigManager();
         _configManager.Initialize(Directory);
         _configManager.LoadConfig<DatabaseConfig>();
 
-        // Database
         DatabaseManager = new DatabaseManager();
         DatabaseManager.Initialize(_configManager);
-        DatabaseManager.RegisterEntity<Faction>();
-        DatabaseManager.RegisterEntity<Member>();
+
+        // Parent first (required when Member has a FK to Faction).
+        // MigrationMode.Update lets us evolve schema during active development.
+        DatabaseManager.RegisterEntity<Faction>(MigrationMode.Update);
+        DatabaseManager.RegisterEntity<Member>(MigrationMode.Update);
+
         DatabaseManager.Load();
 
         Rocket.Core.Logging.Logger.Log("FactionPlugin loaded.");
@@ -165,7 +180,6 @@ public class CreateFactionCommand : IRocketCommand
         {
             var factions = FactionPlugin.Instance.DatabaseManager.Table<Faction>();
 
-            // Check if name is taken
             var existing = await factions.FirstOrDefaultAsync(f => f.Name == factionName);
             if (existing != null)
             {
@@ -174,9 +188,9 @@ public class CreateFactionCommand : IRocketCommand
                 return;
             }
 
-            // Create the faction
             var faction = new Faction
             {
+                PublicId = Guid.NewGuid(),
                 Name = factionName,
                 LeaderSteamId = steamId,
                 CreatedAt = DateTime.UtcNow,
@@ -185,7 +199,6 @@ public class CreateFactionCommand : IRocketCommand
             };
             await factions.InsertAsync(faction);
 
-            // Add the creator as leader
             var members = FactionPlugin.Instance.DatabaseManager.Table<Member>();
             await members.InsertAsync(new Member
             {
@@ -204,7 +217,9 @@ public class CreateFactionCommand : IRocketCommand
 
 ---
 
-## Command: List Factions
+## Command: Show Faction Roster
+
+This shows the navigation property in action. Loading the faction also loads its members in a single follow-up query.
 
 ```csharp
 using System.Collections.Generic;
@@ -212,124 +227,84 @@ using BlueBeard.Core.Helpers;
 using Rocket.API;
 using Rocket.Unturned.Chat;
 
-public class ListFactionsCommand : IRocketCommand
+public class FactionRosterCommand : IRocketCommand
 {
     public AllowedCaller AllowedCaller => AllowedCaller.Both;
-    public string Name => "listfactions";
-    public string Help => "Lists all active factions.";
-    public string Syntax => "";
+    public string Name => "factionroster";
+    public string Help => "Shows the roster of a faction.";
+    public string Syntax => "<name>";
     public List<string> Aliases => new();
-    public List<string> Permissions => new() { "faction.list" };
+    public List<string> Permissions => new() { "faction.view" };
 
     public void Execute(IRocketPlayer caller, string[] command)
     {
+        if (command.Length < 1) { UnturnedChat.Say(caller, "Usage: /factionroster <name>"); return; }
+        var name = command[0];
+
         ThreadHelper.RunAsynchronously(async () =>
         {
             var factions = FactionPlugin.Instance.DatabaseManager.Table<Faction>();
-            var list = await factions.Where(f => f.Status == FactionStatus.Active);
+            var faction = await factions.FirstOrDefaultAsync(f => f.Name == name);
 
             ThreadHelper.RunSynchronously(() =>
             {
-                if (list.Count == 0)
-                {
-                    UnturnedChat.Say(caller, "No active factions.");
-                    return;
-                }
+                if (faction == null) { UnturnedChat.Say(caller, "Faction not found."); return; }
 
-                UnturnedChat.Say(caller, $"Active factions ({list.Count}):");
-                foreach (var f in list)
+                UnturnedChat.Say(caller, $"=== {faction.Name} (Level {faction.Level}) ===");
+                // faction.Members was loaded automatically via [HasMany]
+                foreach (var m in faction.Members)
                 {
-                    UnturnedChat.Say(caller, $"  [{f.Id}] {f.Name} - Level {f.Level}");
+                    UnturnedChat.Say(caller, $"  {m.Role}: {m.SteamId}");
                 }
+                UnturnedChat.Say(caller, $"Total: {faction.Members.Count}");
             });
-        }, "Failed to list factions");
+        }, "Failed to load faction roster");
     }
 }
 ```
 
 ---
 
-## Command: Add Member
+## Command: Find My Faction (BelongsTo example)
+
+Loading a member auto-populates `member.Faction`, so you can show parent info without a second explicit query.
 
 ```csharp
-using System;
 using System.Collections.Generic;
 using BlueBeard.Core.Helpers;
 using Rocket.API;
 using Rocket.Unturned.Chat;
 using Rocket.Unturned.Player;
-using Steamworks;
 
-public class AddMemberCommand : IRocketCommand
+public class MyFactionCommand : IRocketCommand
 {
     public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "factioninvite";
-    public string Help => "Adds a player to your faction.";
-    public string Syntax => "<player>";
+    public string Name => "myfaction";
+    public string Help => "Shows your current faction.";
+    public string Syntax => "";
     public List<string> Aliases => new();
-    public List<string> Permissions => new() { "faction.invite" };
+    public List<string> Permissions => new() { "faction.view" };
 
     public void Execute(IRocketPlayer caller, string[] command)
     {
-        if (command.Length < 1)
-        {
-            UnturnedChat.Say(caller, "Usage: /factioninvite <player>");
-            return;
-        }
-
         var player = (UnturnedPlayer)caller;
-        var target = UnturnedPlayer.FromName(command[0]);
-        if (target == null)
-        {
-            UnturnedChat.Say(caller, "Player not found.");
-            return;
-        }
-
-        var callerSteamId = player.CSteamID.m_SteamID;
-        var targetSteamId = target.CSteamID.m_SteamID;
+        var steamId = player.CSteamID.m_SteamID;
 
         ThreadHelper.RunAsynchronously(async () =>
         {
-            var factions = FactionPlugin.Instance.DatabaseManager.Table<Faction>();
             var members = FactionPlugin.Instance.DatabaseManager.Table<Member>();
-
-            // Find the caller's faction (must be leader)
-            var faction = await factions.FirstOrDefaultAsync(
-                f => f.LeaderSteamId == callerSteamId && f.Status == FactionStatus.Active);
-
-            if (faction == null)
-            {
-                ThreadHelper.RunSynchronously(() =>
-                    UnturnedChat.Say(caller, "You are not the leader of any active faction."));
-                return;
-            }
-
-            // Check if target is already a member
-            var existingMember = await members.FirstOrDefaultAsync(
-                m => m.FactionId == faction.Id && m.SteamId == targetSteamId);
-
-            if (existingMember != null)
-            {
-                ThreadHelper.RunSynchronously(() =>
-                    UnturnedChat.Say(caller, $"{target.DisplayName} is already in your faction."));
-                return;
-            }
-
-            // Add the member
-            await members.InsertAsync(new Member
-            {
-                FactionId = faction.Id,
-                SteamId = targetSteamId,
-                Role = MemberRole.Member,
-                JoinedAt = DateTime.UtcNow
-            });
+            var membership = await members.FirstOrDefaultAsync(m => m.SteamId == steamId);
 
             ThreadHelper.RunSynchronously(() =>
             {
-                UnturnedChat.Say(caller, $"{target.DisplayName} has been added to {faction.Name}.");
-                UnturnedChat.Say(target, $"You have been added to faction {faction.Name}.");
+                if (membership == null) { UnturnedChat.Say(caller, "You're not in a faction."); return; }
+
+                // membership.Faction was loaded automatically via [BelongsTo]
+                UnturnedChat.Say(caller,
+                    $"You are a {membership.Role} of {membership.Faction.Name} " +
+                    $"(joined {membership.JoinedAt:yyyy-MM-dd}).");
             });
-        }, "Failed to add member");
+        }, "Failed to load membership");
     }
 }
 ```
@@ -338,7 +313,7 @@ public class AddMemberCommand : IRocketCommand
 
 ## Command: Disband Faction
 
-This example demonstrates `UpdateAsync` and `DeleteAsync` with an expression predicate.
+This example demonstrates `UpdateAsync` and `DeleteAsync` with an expression predicate. Note that `OnDelete = Cascade` on the FK means deleting a Faction would automatically cascade to Members at the database level — but here we mark the faction disbanded instead, and clear members manually.
 
 ```csharp
 using System;
@@ -367,7 +342,6 @@ public class DisbandFactionCommand : IRocketCommand
             var factions = FactionPlugin.Instance.DatabaseManager.Table<Faction>();
             var members = FactionPlugin.Instance.DatabaseManager.Table<Member>();
 
-            // Find faction where caller is leader
             var faction = await factions.FirstOrDefaultAsync(
                 f => f.LeaderSteamId == steamId && f.Status == FactionStatus.Active);
 
@@ -378,11 +352,9 @@ public class DisbandFactionCommand : IRocketCommand
                 return;
             }
 
-            // Mark the faction as disbanded
             faction.Status = FactionStatus.Disbanded;
             await factions.UpdateAsync(faction);
 
-            // Remove all members using expression-based delete
             int factionId = faction.Id;
             await members.DeleteAsync(m => m.FactionId == factionId);
 
@@ -395,6 +367,43 @@ public class DisbandFactionCommand : IRocketCommand
 
 ---
 
+## Custom converter example
+
+Storing a CLR type that doesn't have a built-in converter — say, a `Vector3` from UnityEngine, packed as `"x,y,z"` in a `VARCHAR`:
+
+```csharp
+using System;
+using BlueBeard.Database.Converters;
+using UnityEngine;
+
+public class Vector3Converter : IValueConverter
+{
+    public Type ClrType => typeof(Vector3);
+    public string DefaultSqlType => "VARCHAR(64)";
+
+    public object ToProvider(object clrValue)
+    {
+        var v = (Vector3)clrValue;
+        return $"{v.x},{v.y},{v.z}";
+    }
+
+    public object FromProvider(object providerValue)
+    {
+        var s = providerValue as string ?? providerValue?.ToString();
+        if (string.IsNullOrEmpty(s)) return Vector3.zero;
+        var parts = s.Split(',');
+        return new Vector3(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]));
+    }
+}
+
+// Register once at plugin startup, before any entity is queried:
+ValueConverters.Register(new Vector3Converter());
+```
+
+After registration, a `public Vector3 SpawnPosition { get; set; }` property on any entity will Just Work — schema gets `VARCHAR(64)`, inserts and reads round-trip cleanly, and `Where(e => e.SpawnPosition == knownPosition)` parameter-binds through the converter.
+
+---
+
 ## Summary
 
 The typical workflow for any database operation in a command:
@@ -404,3 +413,5 @@ The typical workflow for any database operation in a command:
 3. Perform async CRUD operations (`QueryAsync`, `Where`, `FirstOrDefaultAsync`, `InsertAsync`, `UpdateAsync`, `DeleteAsync`).
 4. Call `ThreadHelper.RunSynchronously(() => { ... })` to dispatch UI updates and Unturned API calls back to the main thread.
 5. Pass an error message string as the second argument to `RunAsynchronously` so failures are logged.
+
+For arbitrary SQL the expression visitor can't translate (joins, `LIKE`, subqueries), use `QuerySqlAsync` or `WithConnectionAsync` — see [Queries](Queries).
