@@ -11,6 +11,18 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   NUGET_SOURCE: https://api.nuget.org/v3/index.json
+  ALL_PROJECTS: >-
+    BlueBeard.Cooldowns
+    BlueBeard.Core
+    BlueBeard.Database
+    BlueBeard.Effects
+    BlueBeard.Events
+    BlueBeard.Holograms
+    BlueBeard.Items
+    BlueBeard.MiniGames
+    BlueBeard.SnapLogic
+    BlueBeard.UI
+    BlueBeard.Zones
 
 jobs:
   build-and-publish:
@@ -44,15 +56,60 @@ jobs:
           fi
           echo "Resolved version: $VERSION"
 
+      - name: Determine projects to publish
+        id: changes
+        run: |
+          # Tag releases always publish all packages at the coordinated version.
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "Tag release — publishing all projects"
+            echo "projects=$(echo $ALL_PROJECTS | xargs)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+
+          # New branch or force-push: no usable diff base. Publish everything to be safe.
+          if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+            echo "No diff base (new branch or force-push) — publishing all projects"
+            echo "projects=$(echo $ALL_PROJECTS | xargs)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FILES=$(git diff --name-only "$BEFORE" "$AFTER")
+          echo "Files changed in this push:"
+          echo "$FILES" | sed 's/^/  /'
+
+          # Build infrastructure changes affect every package — rebuild all.
+          if echo "$FILES" | grep -qE '^(\.github/workflows/|.*\.sln$|Directory\.Build\.|nuget\.config$)'; then
+            echo "Build infrastructure changed — publishing all projects"
+            echo "projects=$(echo $ALL_PROJECTS | xargs)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED=""
+          for project in $ALL_PROJECTS; do
+            if echo "$FILES" | grep -q "^$project/"; then
+              CHANGED="$CHANGED $project"
+            fi
+          done
+          CHANGED=$(echo $CHANGED | xargs)
+
+          echo "projects=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "Will publish: ${CHANGED:-(none)}"
+
       - name: Restore
+        if: steps.changes.outputs.projects != ''
         run: dotnet restore Infastructure.sln
 
       - name: Build
+        if: steps.changes.outputs.projects != ''
         run: dotnet build Infastructure.sln --configuration Release --no-restore -p:Version=${{ steps.version.outputs.version }}
 
       - name: Pack
+        if: steps.changes.outputs.projects != ''
         run: |
-          for project in BlueBeard.Cooldowns BlueBeard.Core BlueBeard.Database BlueBeard.Effects BlueBeard.Events BlueBeard.Holograms BlueBeard.Items BlueBeard.MiniGames BlueBeard.SnapLogic BlueBeard.UI BlueBeard.Zones; do
+          for project in ${{ steps.changes.outputs.projects }}; do
             dotnet pack "$project/$project.csproj" \
               --configuration Release \
               --no-build \
@@ -61,6 +118,7 @@ jobs:
           done
 
       - name: Push to NuGet.org
+        if: steps.changes.outputs.projects != ''
         run: |
           for package in ./nupkgs/*.nupkg; do
             dotnet nuget push "$package" \
@@ -68,3 +126,7 @@ jobs:
               --api-key ${{ secrets.NUGET_API_KEY }} \
               --skip-duplicate
           done
+
+      - name: Nothing to publish
+        if: steps.changes.outputs.projects == ''
+        run: echo "No project sources changed in this push — skipping build and publish."

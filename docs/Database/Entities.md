@@ -120,17 +120,22 @@ The following CLR types map to SQL types automatically. Mapping precedence is `[
 
 ### Built-in primitives
 
-| CLR Type     | SQL Type           | Notes                                        |
-|--------------|--------------------|----------------------------------------------|
-| `int`        | `INT`              |                                              |
-| `long`       | `BIGINT`           |                                              |
-| `ulong`      | `BIGINT UNSIGNED`  |                                              |
-| `string`     | `VARCHAR(255)`     | Override with `[ColumnType]` for larger text |
-| `bool`       | `TINYINT(1)`       |                                              |
-| `float`      | `FLOAT`            |                                              |
-| `double`     | `DOUBLE`           |                                              |
-| `DateTime`   | `DATETIME`         |                                              |
-| `enum`       | `INT`              | Any enum type is stored as its integer value |
+| CLR Type     | SQL Type              | Range                                     |
+|--------------|-----------------------|-------------------------------------------|
+| `byte`       | `TINYINT UNSIGNED`    | 0 to 255                                  |
+| `sbyte`      | `TINYINT`             | -128 to 127                               |
+| `short`      | `SMALLINT`            | -32,768 to 32,767                         |
+| `ushort`     | `SMALLINT UNSIGNED`   | 0 to 65,535                               |
+| `int`        | `INT`                 | -2³¹ to 2³¹-1                             |
+| `uint`       | `INT UNSIGNED`        | 0 to 2³²-1                                |
+| `long`       | `BIGINT`              | -2⁶³ to 2⁶³-1                             |
+| `ulong`      | `BIGINT UNSIGNED`     | 0 to 2⁶⁴-1                                |
+| `string`     | `VARCHAR(255)`        | Override with `[ColumnType]` for larger text |
+| `bool`       | `TINYINT(1)`          |                                            |
+| `float`      | `FLOAT`               |                                            |
+| `double`     | `DOUBLE`              |                                            |
+| `DateTime`   | `DATETIME`            |                                            |
+| `enum`       | `INT`                 | Stored as the integer underlying value     |
 
 ### Built-in converter types
 
