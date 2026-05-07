@@ -27,6 +27,7 @@ A record of a child barricade occupying a snap point, storing the point name, as
 ## Basic Setup
 
 ```csharp
+using BlueBeard.RocketMod;
 using BlueBeard.SnapLogic;
 using BlueBeard.SnapLogic.Models;
 using UnityEngine;
@@ -37,6 +38,8 @@ public class MyPlugin : RocketPlugin
 
     protected override void Load()
     {
+        RocketModBootstrap.Install();
+
         _snapManager = new SnapManager();
 
         _snapManager.RegisterDefinition(new SnapDefinition
@@ -71,6 +74,7 @@ public class MyPlugin : RocketPlugin
     protected override void Unload()
     {
         _snapManager.Unload();
+        RocketModBootstrap.Uninstall();
     }
 }
 ```

@@ -336,9 +336,10 @@ public class BountyAdminReloadCommand : SubCommand
 Ties everything together: initializes the config manager, loads configs, sets up the database, and generates command docs.
 
 ```csharp
+using BlueBeard.Core.Abstractions;
 using BlueBeard.Core.Configs;
 using BlueBeard.Core.Helpers;
-using Rocket.Core.Logging;
+using BlueBeard.RocketMod;
 using Rocket.Core.Plugins;
 
 namespace BountyPlugin;
@@ -353,6 +354,9 @@ public class BountyPlugin : RocketPlugin
     {
         Instance = this;
 
+        // Install the host adapter so BlueBeardHost.Logger / Chat / etc. work
+        RocketModBootstrap.Install();
+
         // Initialize the config system
         ConfigManager = new ConfigManager();
         ConfigManager.Initialize(Directory);
@@ -362,8 +366,8 @@ public class BountyPlugin : RocketPlugin
 
         // Log config values
         var config = ConfigManager.GetConfig<BountyConfig>();
-        Logger.Log($"Bounty range: {config.MinBounty} - {config.MaxBounty}");
-        Logger.Log($"Tax rate: {config.TaxRate * 100}%");
+        BlueBeardHost.Logger.Log($"Bounty range: {config.MinBounty} - {config.MaxBounty}");
+        BlueBeardHost.Logger.Log($"Tax rate: {config.TaxRate * 100}%");
 
         // Initialize the database
         Database = new BountyDatabase();
@@ -371,16 +375,19 @@ public class BountyPlugin : RocketPlugin
         // Auto-generate command documentation
         CommandDocGenerator.Generate(Directory);
 
-        Logger.Log("BountyPlugin loaded!");
+        BlueBeardHost.Logger.Log("BountyPlugin loaded!");
     }
 
     protected override void Unload()
     {
         Instance = null;
-        Logger.Log("BountyPlugin unloaded.");
+        BlueBeardHost.Logger.Log("BountyPlugin unloaded.");
+        RocketModBootstrap.Uninstall();
     }
 }
 ```
+
+Switching this plugin to OpenMod requires only swapping the bootstrap call (and the plugin base class) — see [Mod-Host Adapters](../Mods/Home.md). Everything inside `Load()` / `Unload()` stays identical.
 
 ## Command Usage Summary
 

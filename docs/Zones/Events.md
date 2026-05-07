@@ -12,7 +12,7 @@ Fired when a player (or a player inside a vehicle) enters a zone's trigger colli
 zoneManager.PlayerEnteredZone += (Player player, ZoneDefinition zone) =>
 {
     var name = player.channel.owner.playerID.playerName;
-    Logger.Log($"{name} entered zone {zone.Id}");
+    BlueBeardHost.Logger.Log($"{name} entered zone {zone.Id}");
 };
 ```
 
@@ -24,7 +24,7 @@ Fired when a player (or a player inside a vehicle) exits a zone's trigger collid
 zoneManager.PlayerExitedZone += (Player player, ZoneDefinition zone) =>
 {
     var name = player.channel.owner.playerID.playerName;
-    Logger.Log($"{name} left zone {zone.Id}");
+    BlueBeardHost.Logger.Log($"{name} left zone {zone.Id}");
 };
 ```
 

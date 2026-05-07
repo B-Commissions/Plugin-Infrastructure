@@ -101,9 +101,11 @@ public enum MemberRole
 ## Plugin Setup
 
 ```csharp
+using BlueBeard.Core.Abstractions;
 using BlueBeard.Core.Configs;
 using BlueBeard.Core.Helpers;
 using BlueBeard.Database;
+using BlueBeard.RocketMod;
 using Rocket.API;
 using Rocket.Core.Plugins;
 
@@ -117,6 +119,8 @@ public class FactionPlugin : RocketPlugin
     protected override void Load()
     {
         Instance = this;
+
+        RocketModBootstrap.Install();
 
         _configManager = new ConfigManager();
         _configManager.Initialize(Directory);
@@ -132,16 +136,19 @@ public class FactionPlugin : RocketPlugin
 
         DatabaseManager.Load();
 
-        Rocket.Core.Logging.Logger.Log("FactionPlugin loaded.");
+        BlueBeardHost.Logger.Log("FactionPlugin loaded.");
     }
 
     protected override void Unload()
     {
         DatabaseManager.Unload();
-        Rocket.Core.Logging.Logger.Log("FactionPlugin unloaded.");
+        BlueBeardHost.Logger.Log("FactionPlugin unloaded.");
+        RocketModBootstrap.Uninstall();
     }
 }
 ```
+
+> Plugin scaffolding above includes `RocketModBootstrap.Install()` so `BlueBeardHost.Logger.Log` works. Command bodies below stick with `UnturnedChat.Say(caller, ...)` — that's the simpler form when the caller may be a console (`AllowedCaller.Both`). For framework-agnostic chat, use `BlueBeardHost.Chat.Say(steamId, message)` — see [Mod-Host Adapters](../Mods/Home.md).
 
 ---
 

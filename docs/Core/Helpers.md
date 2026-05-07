@@ -23,7 +23,7 @@ public class ThreadHelper
 |--------|-------------|
 | `RunAsynchronously(Action, string)` | Queues the action on `ThreadPool`. Exceptions are caught and logged on the main thread via `RunSynchronously`. |
 | `RunAsynchronously(Func<Task>, string)` | Runs the async delegate via `Task.Run`. Exceptions are caught and logged on the main thread. |
-| `RunSynchronously(Action, float)` | Dispatches the action to Unity's main thread using `TaskDispatcher.QueueOnMainThread`. Optionally delays by `delaySeconds`. |
+| `RunSynchronously(Action, float)` | Dispatches the action to Unity's main thread. Under the Rocket adapter this delegates to `Rocket.Core.Utils.TaskDispatcher.QueueOnMainThread`; under OpenMod it uses a coroutine runner. Optionally delays by `delaySeconds`. |
 
 ### Examples
 
@@ -57,13 +57,15 @@ ThreadHelper.RunAsynchronously(async () =>
 // Delay an action on the main thread by 2 seconds
 ThreadHelper.RunSynchronously(() =>
 {
-    UnturnedChat.Say("The event starts now!");
+    BlueBeardHost.Chat.Broadcast("The event starts now!");
 }, 2f);
 ```
 
 ## MessageHelper
 
 Thread-safe player and server messaging. Internally uses `ThreadHelper.RunSynchronously` to dispatch `UnturnedChat.Say` calls to the main thread, so it is safe to call from any thread.
+
+> `MessageHelper.Say` calls `UnturnedChat.Say` directly today. For framework-agnostic chat that also runs under OpenMod, use `BlueBeardHost.Chat.Say(steamId, message, color)` after installing one of the host adapters — see [Mod-Host Adapters](../Mods/Home.md). `BlueBeardHost.Chat` is also thread-safe (calls are queued onto the main thread by the dispatcher).
 
 ### API
 

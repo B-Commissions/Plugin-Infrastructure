@@ -302,8 +302,9 @@ A condensed example showing all pieces together in a plugin lifecycle.
 
 ```csharp
 using System.Collections.Generic;
+using BlueBeard.Core.Abstractions;
 using BlueBeard.Holograms;
-using Rocket.Core.Logging;
+using BlueBeard.RocketMod;
 using SDG.Unturned;
 using UnityEngine;
 
@@ -315,6 +316,8 @@ public class MyHologramPlugin
 
     public void Load()
     {
+        RocketModBootstrap.Install();
+
         _hologramManager = new HologramManager();
         _hologramManager.Load();
 
@@ -368,11 +371,12 @@ public class MyHologramPlugin
         _hologramManager.PlayerEnteredHologram -= OnEntered;
         _hologramManager.PlayerExitedHologram -= OnExited;
         _hologramManager.Unload();
+        RocketModBootstrap.Uninstall();
     }
 
     private void OnEntered(Player player, HologramDefinition definition)
     {
-        Logger.Log($"{player.channel.owner.playerID.playerName} entered hologram");
+        BlueBeardHost.Logger.Log($"{player.channel.owner.playerID.playerName} entered hologram");
 
         if (definition == _statsDef)
         {

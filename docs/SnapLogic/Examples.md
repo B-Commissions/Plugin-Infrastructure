@@ -5,11 +5,12 @@
 A barricade with two snap points for mounting weapons.
 
 ```csharp
+using BlueBeard.Core.Abstractions;
+using BlueBeard.RocketMod;
 using BlueBeard.SnapLogic;
 using BlueBeard.SnapLogic.Models;
 using Rocket.Core.Plugins;
 using UnityEngine;
-using Logger = Rocket.Core.Logging.Logger;
 
 public class WeaponRackPlugin : RocketPlugin
 {
@@ -17,6 +18,8 @@ public class WeaponRackPlugin : RocketPlugin
 
     protected override void Load()
     {
+        RocketModBootstrap.Install();
+
         _snapManager = new SnapManager();
 
         _snapManager.RegisterDefinition(new SnapDefinition
@@ -47,13 +50,14 @@ public class WeaponRackPlugin : RocketPlugin
 
     private void OnWeaponSnapped(SnapHost host, SnapAttachment attachment)
     {
-        Logger.Log($"Weapon {attachment.AssetId} mounted at {attachment.PointName}");
+        BlueBeardHost.Logger.Log($"Weapon {attachment.AssetId} mounted at {attachment.PointName}");
     }
 
     protected override void Unload()
     {
         _snapManager.OnItemSnapped -= OnWeaponSnapped;
         _snapManager.Unload();
+        RocketModBootstrap.Uninstall();
     }
 }
 ```

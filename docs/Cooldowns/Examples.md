@@ -1,5 +1,7 @@
 # Examples
 
+> Examples below assume `RocketModBootstrap.Install()` (or `OpenModBootstrap.Install(...)`) has been called at plugin load — see [Mod-Host Adapters: Getting Started](../Mods/Getting-Started.md). Direct calls to `UnturnedChat.Say` work too if you'd rather not route through the abstraction.
+
 ## Dash ability (ephemeral cooldown)
 
 ```csharp
@@ -13,7 +15,7 @@ public class DashCommand : IRocketCommand
         if (!MyPlugin.Cooldowns.TryUse(key, 8f))
         {
             var remaining = MyPlugin.Cooldowns.GetRemaining(key);
-            UnturnedChat.Say(player, $"Dash on cooldown ({remaining:F1}s)");
+            BlueBeardHost.Chat.Say(player.CSteamID, $"Dash on cooldown ({remaining:F1}s)");
             return;
         }
 
@@ -40,7 +42,7 @@ public void Use(UnturnedPlayer player, Ability ability)
 
     if (!MyPlugin.Cooldowns.TryUse(key, duration))
     {
-        UnturnedChat.Say(player, $"{ability} on cooldown ({MyPlugin.Cooldowns.GetRemaining(key):F0}s)");
+        BlueBeardHost.Chat.Say(player.CSteamID, $"{ability} on cooldown ({MyPlugin.Cooldowns.GetRemaining(key):F0}s)");
         return;
     }
 

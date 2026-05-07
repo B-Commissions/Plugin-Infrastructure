@@ -1,5 +1,7 @@
 # Examples
 
+> Examples below assume `RocketModBootstrap.Install()` (or `OpenModBootstrap.Install(...)`) has been called at plugin load — see [Mod-Host Adapters: Getting Started](../Mods/Getting-Started.md).
+
 ## Faction lifecycle events
 
 Define the action enum and a strongly-typed context:
@@ -31,13 +33,13 @@ bus.Subscribe(FactionAction.MemberJoined | FactionAction.MemberLeft, (action, ct
 {
     var fctx = (FactionContext)ctx;
     var verb = action == FactionAction.MemberJoined ? "joined" : "left";
-    UnturnedChat.Say($"{ctx.Player.name} {verb} faction {fctx.FactionName}");
+    BlueBeardHost.Chat.Broadcast($"{ctx.Player.name} {verb} faction {fctx.FactionName}");
 });
 
 bus.Subscribe(FactionAction.Disbanded, (_, ctx) =>
 {
     var fctx = (FactionContext)ctx;
-    Logger.Log($"Faction {fctx.FactionId} disbanded at {ctx.Timestamp:u}");
+    BlueBeardHost.Logger.Log($"Faction {fctx.FactionId} disbanded at {ctx.Timestamp:u}");
 });
 ```
 
@@ -95,7 +97,7 @@ public bool TryCreateOffer(UnturnedPlayer player, Offer offer)
     bus.Publish(TradeAction.OfferCreated, ctx);
     if (ctx.Cancelled)
     {
-        UnturnedChat.Say(player, $"Offer rejected ({ctx.Data["cancel.reason"]}).");
+        BlueBeardHost.Chat.Say(player.CSteamID, $"Offer rejected ({ctx.Data["cancel.reason"]}).");
         return false;
     }
 

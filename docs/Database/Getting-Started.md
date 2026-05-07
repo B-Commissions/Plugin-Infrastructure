@@ -40,8 +40,10 @@ When `LoadDefaults()` is called (e.g., when no config file exists yet), these de
 Set up the database system in your plugin's `Load` method:
 
 ```csharp
+using BlueBeard.Core.Abstractions;
 using BlueBeard.Core.Configs;
 using BlueBeard.Database;
+using BlueBeard.RocketMod;
 
 public class MyPlugin : RocketPlugin<MyPluginConfig>
 {
@@ -50,6 +52,9 @@ public class MyPlugin : RocketPlugin<MyPluginConfig>
 
     protected override void Load()
     {
+        // 0. Install the host adapter so BlueBeardHost.Logger / Chat / etc. work
+        RocketModBootstrap.Install();
+
         // 1. Initialize ConfigManager with the plugin directory
         _configManager = new ConfigManager();
         _configManager.Initialize(Directory);
@@ -73,6 +78,7 @@ public class MyPlugin : RocketPlugin<MyPluginConfig>
     protected override void Unload()
     {
         _databaseManager.Unload();
+        RocketModBootstrap.Uninstall();
     }
 }
 ```

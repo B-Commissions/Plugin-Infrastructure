@@ -357,7 +357,7 @@ ThreadHelper.RunAsynchronously(async () =>
         // Back on the main thread -- safe to use Unturned APIs
         foreach (var faction in list)
         {
-            Rocket.Core.Logging.Logger.Log($"Faction: {faction.Name} (Level {faction.Level})");
+            BlueBeardHost.Logger.Log($"Faction: {faction.Name} (Level {faction.Level})");
         }
     });
 });

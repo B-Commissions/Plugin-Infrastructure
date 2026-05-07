@@ -1,8 +1,8 @@
 # Examples
 
-## Storage crate with owner stamp
+## Storage crate with owner stamp (cursor API)
 
-Goal: when a player deploys a storage crate, stamp the owner's Steam ID into the item state so we can later look up who owns it.
+Goal: when a player equips a storage crate item, stamp the owner's Steam ID into the item state so we can later look up who owns it. Uses the cursor `StateWriter` so we don't track offsets manually.
 
 ```csharp
 using BlueBeard.Items;
@@ -15,16 +15,36 @@ public class CrateBehaviour : ItemBehaviourBase
     public override void OnEquipped(Player player, ItemJar jar)
     {
         if (!ItemStateValidator.IsSafeForCustomState(jar.item.id)) return;
-        if (jar.item.state == null || jar.item.state.Length < StateSize)
-            jar.item.state = new byte[StateSize];
 
         var owner = player.channel.owner.playerID.steamID.m_SteamID;
-        ItemStateEncoder.WriteUInt64(jar.item.state, 0, owner);
+        jar.item.state = new StateWriter(StateSize)
+            .WriteUInt64(owner)
+            .ToArray();
     }
 }
 
 // Registration:
 MyPlugin.Items.Register(CrateBehaviour.CrateAssetId, new CrateBehaviour());
+```
+
+Read it back with the cursor reader:
+
+```csharp
+public ulong ReadCrateOwner(ItemJar jar)
+{
+    if (jar?.item?.state == null || jar.item.state.Length < 8) return 0;
+    return new StateReader(jar.item.state).ReadUInt64();
+}
+```
+
+Or use the offset-based static API for the same result:
+
+```csharp
+public ulong ReadCrateOwner(ItemJar jar)
+{
+    if (jar?.item?.state == null || jar.item.state.Length < 8) return 0;
+    return ItemStateEncoder.ReadUInt64(jar.item.state, 0);
+}
 ```
 
 Retrieve the owner later:
@@ -118,7 +138,7 @@ public void OnPlayerPickupRequested(UnturnedPlayer player, ItemJar jar)
     if (!MyPlugin.Items.NotifyPickedUp(player.Player, jar))
     {
         // Block the pickup and return the item to the ground.
-        UnturnedChat.Say(player, "You are not the owner of that lockpick.");
+        BlueBeardHost.Chat.Say(player.CSteamID, "You are not the owner of that lockpick.");
         RejectPickup(player, jar);
     }
 }
@@ -161,4 +181,136 @@ var composite = new CompositeBehaviour();
 composite.Add(new CrateBehaviour());
 composite.Add(new AntiRaidBehaviour());
 MyPlugin.Items.Register(CrateBehaviour.CrateAssetId, composite);
+```
+
+## Barricade — owner-only salvage
+
+Goal: a storage barricade (asset 10500 once placed) can only be salvaged by its owner.
+
+```csharp
+using BlueBeard.Items.Behaviours;
+using SDG.Unturned;
+using Steamworks;
+
+public class CrateOwnerOnlySalvage : BarricadeBehaviourBase
+{
+    public override bool OnSalvageRequested(BarricadeDrop drop, SteamPlayer instigator)
+    {
+        var owner = drop.GetServersideData().owner;
+        return owner == 0 || owner == instigator.playerID.steamID.m_SteamID;
+    }
+
+    public override void OnSpawned(BarricadeDrop drop)
+    {
+        // Optional — log or seed extended state on spawn
+    }
+}
+
+// Registration
+MyPlugin.Barricades.Register(10500, new CrateOwnerOnlySalvage());
+MyPlugin.Barricades.Load();
+```
+
+## Vehicle — VIP-only entry, no siphoning
+
+```csharp
+using BlueBeard.Items.Behaviours;
+using SDG.Unturned;
+using Steamworks;
+
+public class VipVehicleBehaviour : VehicleBehaviourBase
+{
+    public override bool OnEnterRequested(Player player, InteractableVehicle vehicle)
+    {
+        var steamId = player.channel.owner.playerID.steamID.m_SteamID;
+        // Only the locked owner may enter
+        return vehicle.lockedOwner.m_SteamID == steamId;
+    }
+
+    public override bool OnSiphonRequested(InteractableVehicle vehicle, Player instigator, ushort desiredAmount)
+    {
+        // VIP vehicles can never be siphoned
+        return false;
+    }
+}
+
+MyPlugin.Vehicles.Register(95, new VipVehicleBehaviour());
+MyPlugin.Vehicles.Load();
+```
+
+## Structure — protected build
+
+```csharp
+using BlueBeard.Items.Behaviours;
+using SDG.Unturned;
+using Steamworks;
+
+public class IndestructibleStructure : StructureBehaviourBase
+{
+    public override bool OnDamageRequested(CSteamID instigator, StructureDrop drop, ushort pendingDamage, EDamageOrigin origin)
+    {
+        // Block all damage
+        return false;
+    }
+}
+
+MyPlugin.Structures.Register(2065, new IndestructibleStructure());
+MyPlugin.Structures.Load();
+```
+
+## Animal — health-doubled boss deer
+
+```csharp
+using BlueBeard.Items.Behaviours;
+using SDG.Unturned;
+
+public class TankyDeer : AnimalBehaviourBase
+{
+    public override bool OnDamageRequested(ref DamageAnimalParameters parameters)
+    {
+        // Halve incoming damage
+        parameters.damage *= 0.5f;
+        return true;
+    }
+}
+
+MyPlugin.Animals.Register(36, new TankyDeer());
+MyPlugin.Animals.Load();
+```
+
+## Cursor + reader pair (multi-field item state)
+
+Goal: a custom signal-flare item that records (owner Steam ID, deployed-at timestamp, paint colour, optional message) and stamps it into the item state on equip.
+
+```csharp
+using BlueBeard.Items;
+
+public class FlareBehaviour : ItemBehaviourBase
+{
+    private const int MessageMax = 64; // 2 bytes length + up to 62 bytes UTF-8
+    private const int StateSize = 8 + 8 + 4 + MessageMax;
+
+    public override void OnEquipped(Player player, ItemJar jar)
+    {
+        if (!ItemStateValidator.IsSafeForCustomState(jar.item.id)) return;
+
+        var owner = player.channel.owner.playerID.steamID.m_SteamID;
+        var deployedAt = (ulong)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var paintArgb = 0xFFFF8800u; // orange
+
+        jar.item.state = new StateWriter(StateSize)
+            .WriteUInt64(owner)
+            .WriteUInt64(deployedAt)
+            .WriteUInt32(paintArgb)
+            .WriteString("Look up!", MessageMax)
+            .ToArray();
+    }
+}
+
+// Read it back later:
+public (ulong owner, ulong deployedAt, uint paint, string msg) DecodeFlare(ItemJar jar)
+{
+    var r = new StateReader(jar.item.state);
+    return (r.ReadUInt64(), r.ReadUInt64(), r.ReadUInt32(), r.ReadString(64));
+}
 ```

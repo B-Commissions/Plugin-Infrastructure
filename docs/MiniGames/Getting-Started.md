@@ -28,6 +28,7 @@ Mini-games are standalone overlays, **not** part of the `IUI / IUIScreen / IUIDi
 
 ```csharp
 using BlueBeard.MiniGames;
+using BlueBeard.RocketMod;
 using BlueBeard.UI;
 
 public class MyPlugin : RocketPlugin
@@ -37,6 +38,8 @@ public class MyPlugin : RocketPlugin
 
     protected override void Load()
     {
+        RocketModBootstrap.Install();
+
         UI = new UIManager();
         UI.Load();
 
@@ -49,6 +52,7 @@ public class MyPlugin : RocketPlugin
     {
         MiniGames.Unload();
         UI.Unload();
+        RocketModBootstrap.Uninstall();
     }
 }
 ```

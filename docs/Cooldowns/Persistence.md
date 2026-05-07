@@ -34,6 +34,7 @@ The key column is the same string the caller passes to `Start` / `IsActive`. The
 ```csharp
 using BlueBeard.Cooldowns;
 using BlueBeard.Database;
+using BlueBeard.RocketMod;
 
 public class MyPlugin : RocketPlugin
 {
@@ -42,6 +43,8 @@ public class MyPlugin : RocketPlugin
 
     protected override void Load()
     {
+        RocketModBootstrap.Install();
+
         // 1. Initialise the database (schema sync happens here).
         Database = new DatabaseManager();
         Database.Initialize(Configuration.Instance);
@@ -58,6 +61,7 @@ public class MyPlugin : RocketPlugin
     {
         Cooldowns.Unload();
         Database.Unload();
+        RocketModBootstrap.Uninstall();
     }
 }
 ```

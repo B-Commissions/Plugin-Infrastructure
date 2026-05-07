@@ -2,10 +2,25 @@
 
 Welcome to the BlueBeard Infrastructure documentation. Each library has its own section with usage guides, API references, and implementation examples.
 
+## What's new
+
+- **Dual mod-host support**: BlueBeard libraries can run under either RocketMod or OpenMod via thin adapter assemblies. See [Mod-Host Adapters](Mods/Home.md).
+- **Behaviour managers for six entity types**: items, barricades, structures, vehicles, zombies, animals — same registry shape for all. See [Items: Behaviour Registry](Items/Behaviour-Registry.md).
+- **Cursor state writer**: `StateWriter` / `StateReader` track byte position automatically; the existing `ItemStateEncoder` static API stays available for explicit-offset use cases. See [Items: State Encoding](Items/State-Encoding.md).
+
+## Cross-cutting
+
+### [Mod-Host Adapters](Mods/Home.md)
+Run BlueBeard libraries under RocketMod **or** OpenMod. `BlueBeard.Core/Abstractions` defines framework-agnostic contracts (`ILogger`, `IChat`, `IPermissions`, `ITaskDispatcher`, `IPlayerEvents`, `IPlayer`), and a host-specific adapter project installs the implementations.
+- [Getting Started](Mods/Getting-Started.md) — Pick an adapter, install it
+- [Abstractions](Mods/Abstractions.md) — The interfaces in `BlueBeard.Core/Abstractions`
+- [RocketMod Adapter](Mods/RocketMod-Adapter.md) — `BlueBeard.RocketMod` setup
+- [OpenMod Adapter](Mods/OpenMod-Adapter.md) — `BlueBeard.OpenMod` setup
+
 ## Libraries
 
 ### [Core](Core/Home.md)
-Foundation library: configuration management, IManager lifecycle, command framework, and utility helpers.
+Foundation library: configuration management, `IManager` lifecycle, command framework, and utility helpers. Also hosts the `Abstractions` namespace consumed by the mod-host adapters.
 - [Configuration](Core/Configuration.md) -- XML config system with auto-migration
 - [Commands](Core/Commands.md) -- Command tree framework with routing and permissions
 - [Helpers](Core/Helpers.md) -- ThreadHelper, MessageHelper, SurfaceHelper, BarricadeHelper
@@ -46,12 +61,12 @@ Proximity-based 3D hologram system with pooled UI overlays.
 - [Dynamic Updates](Holograms/Dynamic-Updates.md) -- Runtime updates and events
 - [Examples](Holograms/Examples.md) -- Shop holograms, instanced displays, filtering
 
-### [Items](Items/Home.md)
-Item state encoding and per-asset behaviour registry. Low-level byte-array helpers plus a high-level handler interface for equip / dequip / use / drop / pickup hooks.
+### [Items & Behaviours](Items/Home.md)
+State encoding and per-asset behaviour registries for **items, barricades, structures, vehicles, zombies, and animals**. Cursor-style state writer plus the original offset-based encoder; one consistent registry shape for all six entity types.
 - [Getting Started](Items/Getting-Started.md) -- Installation and when to use which subsystem
-- [State Encoding](Items/State-Encoding.md) -- ItemStateEncoder API and the safety validator
-- [Behaviour Registry](Items/Behaviour-Registry.md) -- ItemBehaviourManager, IItemBehaviour, ItemBehaviourBase
-- [Examples](Items/Examples.md) -- Storage crate, locked medkit, ownership-veto pickups
+- [State Encoding](Items/State-Encoding.md) -- `StateWriter` / `StateReader` cursor + `ItemStateEncoder` static + safety validator
+- [Behaviour Registry](Items/Behaviour-Registry.md) -- All six managers, what's auto-dispatched vs manual
+- [Examples](Items/Examples.md) -- Storage crate, locked medkit, ownership-veto pickups, VIP vehicle, salvage protection, tanky animal
 
 ### [MiniGames](MiniGames/Home.md)
 Framework for timed, interactive mini-games layered over Unturned's effect system. Handles the full lifecycle (start → tick → input → end) so implementations only define the game logic.

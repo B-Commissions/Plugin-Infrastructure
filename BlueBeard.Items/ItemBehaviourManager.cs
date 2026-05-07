@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using BlueBeard.Core;
+using BlueBeard.Items.Behaviours;
 using Rocket.Unturned;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
@@ -8,8 +8,8 @@ namespace BlueBeard.Items;
 
 /// <summary>
 /// Registry that routes server-side item events (equip, dequip, use, drop, pickup) to
-/// per-asset-id handlers. Register a handler via <see cref="Register"/>; dispatch happens
-/// automatically for events where Unturned exposes a reliable global hook.
+/// per-asset-id handlers. Register a handler via <see cref="EntityBehaviourRegistry{TKey,TBehaviour}.Register"/>;
+/// dispatch happens automatically for events where Unturned exposes a reliable global hook.
 ///
 /// Hooks wired automatically:
 ///  - Equip / dequip via <see cref="PlayerEquipment.OnUseableChanged_Global"/>. Dequip is
@@ -21,41 +21,25 @@ namespace BlueBeard.Items;
 ///    Call these from a plugin-specific hook (command, consumable handler, container
 ///    interaction, etc.) when you want the behaviour invoked.
 /// </summary>
-public class ItemBehaviourManager : IManager
+public class ItemBehaviourManager : EntityBehaviourRegistry<ushort, IItemBehaviour>
 {
-    private readonly Dictionary<ushort, IItemBehaviour> _behaviours = new();
     private readonly Dictionary<ulong, ushort> _lastEquipped = new();
 
-    public void Register(ushort assetId, IItemBehaviour behaviour)
-    {
-        _behaviours[assetId] = behaviour;
-    }
-
-    public void Unregister(ushort assetId)
-    {
-        _behaviours.Remove(assetId);
-    }
-
-    public IItemBehaviour GetBehaviour(ushort assetId)
-    {
-        return _behaviours.TryGetValue(assetId, out var b) ? b : null;
-    }
-
-    public void Load()
+    public override void Load()
     {
         PlayerEquipment.OnUseableChanged_Global += OnUseableChanged;
         U.Events.OnPlayerConnected += OnPlayerConnected;
         U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
     }
 
-    public void Unload()
+    public override void Unload()
     {
         PlayerEquipment.OnUseableChanged_Global -= OnUseableChanged;
         U.Events.OnPlayerConnected -= OnPlayerConnected;
         U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
 
-        _behaviours.Clear();
         _lastEquipped.Clear();
+        base.Unload();
     }
 
     // -----------------------------------------------------------------------
@@ -66,7 +50,7 @@ public class ItemBehaviourManager : IManager
     public void NotifyUsed(Player player, ItemJar jar)
     {
         if (player == null || jar?.item == null) return;
-        if (_behaviours.TryGetValue(jar.item.id, out var behaviour))
+        if (Behaviours.TryGetValue(jar.item.id, out var behaviour))
             behaviour.OnUsed(player, jar);
     }
 
@@ -74,7 +58,7 @@ public class ItemBehaviourManager : IManager
     public void NotifyDropped(Player player, ItemJar jar)
     {
         if (player == null || jar?.item == null) return;
-        if (_behaviours.TryGetValue(jar.item.id, out var behaviour))
+        if (Behaviours.TryGetValue(jar.item.id, out var behaviour))
             behaviour.OnDropped(player, jar);
     }
 
@@ -85,7 +69,7 @@ public class ItemBehaviourManager : IManager
     public bool NotifyPickedUp(Player player, ItemJar jar)
     {
         if (player == null || jar?.item == null) return true;
-        if (_behaviours.TryGetValue(jar.item.id, out var behaviour))
+        if (Behaviours.TryGetValue(jar.item.id, out var behaviour))
             return behaviour.OnPickedUp(player, jar);
         return true;
     }
@@ -103,10 +87,9 @@ public class ItemBehaviourManager : IManager
 
         var currentId = equipment.asset?.id ?? 0;
 
-        // Dequip: previous -> something else (or nothing)
         if (previousId != 0 && previousId != currentId)
         {
-            if (_behaviours.TryGetValue(previousId, out var prevBehaviour))
+            if (Behaviours.TryGetValue(previousId, out var prevBehaviour))
             {
                 // We don't have the original ItemJar anymore; pass null. Handlers that need
                 // the jar reference should capture it in OnEquipped.
@@ -114,10 +97,9 @@ public class ItemBehaviourManager : IManager
             }
         }
 
-        // Equip: something new is in hand
         if (currentId != 0 && currentId != previousId)
         {
-            if (_behaviours.TryGetValue(currentId, out var currBehaviour))
+            if (Behaviours.TryGetValue(currentId, out var currBehaviour))
             {
                 var jar = BuildEquippedJar(equipment);
                 currBehaviour.OnEquipped(equipment.player, jar);

@@ -118,7 +118,9 @@ public class BountyConfig : IConfig
 ### Using It in a Plugin
 
 ```csharp
+using BlueBeard.Core.Abstractions;
 using BlueBeard.Core.Configs;
+using BlueBeard.RocketMod;
 using Rocket.Core.Plugins;
 
 public class BountyPlugin : RocketPlugin
@@ -127,6 +129,8 @@ public class BountyPlugin : RocketPlugin
 
     protected override void Load()
     {
+        RocketModBootstrap.Install();
+
         _configManager = new ConfigManager();
         _configManager.Initialize(Directory);
 
@@ -135,14 +139,16 @@ public class BountyPlugin : RocketPlugin
 
         // Read values
         var config = _configManager.GetConfig<BountyConfig>();
-        Rocket.Core.Logging.Logger.Log($"Reward multiplier: {config.RewardMultiplier}");
+        BlueBeardHost.Logger.Log($"Reward multiplier: {config.RewardMultiplier}");
     }
+
+    protected override void Unload() => RocketModBootstrap.Uninstall();
 
     public void OnSettingsChanged()
     {
         // Reload from disk at runtime
         var config = _configManager.ReloadConfig<BountyConfig>();
-        Rocket.Core.Logging.Logger.Log($"Config reloaded. New max bounty: {config.MaxBounty}");
+        BlueBeardHost.Logger.Log($"Config reloaded. New max bounty: {config.MaxBounty}");
     }
 
     public void UpdateAndSave()

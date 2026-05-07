@@ -4,7 +4,7 @@ namespace BlueBeard.Items;
 
 /// <summary>
 /// Server-side behaviour attached to a specific item asset ID via
-/// <see cref="ItemBehaviourManager.Register"/>. Implement the hooks you care about; inherit
+/// <c>ItemBehaviourManager.Register</c>. Implement the hooks you care about; inherit
 /// <see cref="ItemBehaviourBase"/> for virtual no-op defaults.
 /// </summary>
 public interface IItemBehaviour

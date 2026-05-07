@@ -2,6 +2,13 @@
 
 ---
 
+### Mod-Host Adapters
+- [Overview](Mods-Home)
+- [Getting Started](Mods-Getting-Started)
+- [Abstractions](Mods-Abstractions)
+- [RocketMod Adapter](Mods-RocketMod-Adapter)
+- [OpenMod Adapter](Mods-OpenMod-Adapter)
+
 ### Core
 - [Overview](Core-Home)
 - [Configuration](Core-Configuration)
@@ -47,11 +54,11 @@
 - [Dynamic Updates](Holograms-Dynamic-Updates)
 - [Examples](Holograms-Examples)
 
-### Items
+### Items & Behaviours
 - [Overview](Items-Home)
 - [Getting Started](Items-Getting-Started)
 - [State Encoding](Items-State-Encoding)
-- [Behaviour Registry](Items-Behaviour-Registry)
+- [Behaviour Registry](Items-Behaviour-Registry) — items, barricades, structures, vehicles, zombies, animals
 - [Examples](Items-Examples)
 
 ### MiniGames

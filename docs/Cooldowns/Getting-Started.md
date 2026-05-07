@@ -31,6 +31,7 @@ Expired entries are never removed by a background sweep. They are dropped when t
 
 ```csharp
 using BlueBeard.Cooldowns;
+using BlueBeard.RocketMod;
 
 public class MyPlugin : RocketPlugin
 {
@@ -38,6 +39,8 @@ public class MyPlugin : RocketPlugin
 
     protected override void Load()
     {
+        RocketModBootstrap.Install();   // makes BlueBeardHost services available
+
         Cooldowns = new CooldownManager();
         Cooldowns.Load();
     }
@@ -45,9 +48,12 @@ public class MyPlugin : RocketPlugin
     protected override void Unload()
     {
         Cooldowns.Unload();
+        RocketModBootstrap.Uninstall();
     }
 }
 ```
+
+Running under OpenMod? Use `OpenModBootstrap.Install(...)` instead — see [Mod-Host Adapters: Getting Started](../Mods/Getting-Started.md). The cooldown manager itself doesn't change.
 
 ## The TryUse Pattern
 
@@ -60,7 +66,7 @@ public void Dash(UnturnedPlayer player)
     if (!MyPlugin.Cooldowns.TryUse(key, 8f))
     {
         var remaining = MyPlugin.Cooldowns.GetRemaining(key);
-        UnturnedChat.Say(player, $"Dash on cooldown ({remaining:F1}s)");
+        BlueBeardHost.Chat.Say(player.CSteamID, $"Dash on cooldown ({remaining:F1}s)");
         return;
     }
 

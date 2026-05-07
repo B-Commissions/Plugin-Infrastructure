@@ -28,6 +28,39 @@ Keep this comment adjacent to the writer / reader code. Changing the layout retr
 | `WriteBool / ReadBool` | 1 |
 | `WriteString(buf, offset, value, maxBytes)` / `ReadString(buf, offset)` | 2 + UTF-8 byte length |
 
+## Cursor API: StateWriter / StateReader
+
+If you don't want to track offsets manually, use the cursor-style wrappers `StateWriter` and `StateReader`. They hold the buffer plus a position; each `Write*` / `Read*` advances the cursor by the size of the value. Output bytes are identical to the static encoder -- the cursor delegates to it -- so the two styles are fully interchangeable.
+
+```csharp
+// Write
+jar.item.state = new StateWriter(13)
+    .WriteUInt32(charges)
+    .WriteUInt64(unlockUnix)
+    .WriteBool(locked)
+    .ToArray();
+
+// Read
+var r = new StateReader(jar.item.state);
+var charges    = r.ReadUInt32();
+var unlockUnix = r.ReadUInt64();
+var locked     = r.ReadBool();
+```
+
+Constructors:
+
+| Constructor | Use when |
+|-------------|----------|
+| `new StateWriter(int size)` | Allocating a new buffer for a freshly spawned item |
+| `new StateWriter(byte[] buf, int startOffset = 0)` | Mutating an existing item's state in place |
+| `new StateReader(byte[] buf, int startOffset = 0)` | Reading from an existing item's state |
+
+`Seek(offset)` repositions the cursor; `Skip(count)` advances without writing/reading (useful for reserved regions). `Position`, `Length`, `Remaining`, and `Buffer` are exposed for diagnostics.
+
+`WriteString(value, maxBytes)` / `ReadString(maxBytes)` reserve a fixed `maxBytes` slot regardless of actual encoded length, so subsequent fields land at predictable offsets. Pass the same `maxBytes` to both calls.
+
+The static `ItemStateEncoder` API remains supported for explicit-offset use cases. Pick whichever style fits the call site -- they produce the same bytes.
+
 ### Strings
 
 Strings are length-prefixed UTF-8: the first two bytes at `offset` are a little-endian `ushort` holding the encoded byte length, followed by that many UTF-8 bytes.

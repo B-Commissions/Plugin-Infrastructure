@@ -27,6 +27,7 @@ FactionPlugin/
 ### FactionPlugin.cs -- Static singleton
 
 ```csharp
+using BlueBeard.RocketMod;
 using BlueBeard.UI;
 using Rocket.Core.Plugins;
 
@@ -38,6 +39,8 @@ public class FactionPlugin : RocketPlugin
     protected override void Load()
     {
         Instance = this;
+        RocketModBootstrap.Install();
+
         UI = new UIManager();
         UI.Load();
 
@@ -47,6 +50,7 @@ public class FactionPlugin : RocketPlugin
     protected override void Unload()
     {
         UI.Unload();
+        RocketModBootstrap.Uninstall();
         Instance = null;
     }
 }

@@ -38,7 +38,9 @@ Non-flags enums technically work, but mask filtering degenerates to equality. Al
 ## Basic Setup
 
 ```csharp
+using BlueBeard.Core.Abstractions;
 using BlueBeard.Events;
+using BlueBeard.RocketMod;
 
 public class MyPlugin : RocketPlugin
 {
@@ -46,6 +48,8 @@ public class MyPlugin : RocketPlugin
 
     protected override void Load()
     {
+        RocketModBootstrap.Install();
+
         EventBuses = new EventBusManager();
         EventBuses.Load();
 
@@ -55,13 +59,14 @@ public class MyPlugin : RocketPlugin
         bus.Subscribe(FactionAction.MemberJoined | FactionAction.MemberLeft, (action, ctx) =>
         {
             var faction = (string)ctx.Data["faction"];
-            UnturnedChat.Say($"{ctx.Player.name} {action} faction {faction}");
+            BlueBeardHost.Chat.Broadcast($"{ctx.Player.name} {action} faction {faction}");
         });
     }
 
     protected override void Unload()
     {
         EventBuses.Unload();
+        RocketModBootstrap.Uninstall();
     }
 }
 ```
