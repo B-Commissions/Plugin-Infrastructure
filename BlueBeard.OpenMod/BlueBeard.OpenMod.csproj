@@ -5,7 +5,9 @@
     <RootNamespace>BlueBeard.OpenMod</RootNamespace>
     <AssemblyName>BlueBeard.OpenMod</AssemblyName>
     <PackageId>BlueBeard.OpenMod</PackageId>
+    <Title>BlueBeard OpenMod Adapter</Title>
     <Description>OpenMod adapter for BlueBeard.Core abstractions. Lets BlueBeard libraries run under OpenMod by routing logging, chat, permissions, dispatch, and player events to OpenMod APIs.</Description>
+    <PackageTags>unturned;openmod;plugin;adapter;bluebeard</PackageTags>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
   <ItemGroup>

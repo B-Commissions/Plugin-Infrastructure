@@ -5,7 +5,9 @@
     <RootNamespace>BlueBeard.RocketMod</RootNamespace>
     <AssemblyName>BlueBeard.RocketMod</AssemblyName>
     <PackageId>BlueBeard.RocketMod</PackageId>
+    <Title>BlueBeard RocketMod Adapter</Title>
     <Description>RocketMod adapter for BlueBeard.Core abstractions. Lets BlueBeard libraries run under RocketMod by routing logging, chat, permissions, dispatch, and player events to Rocket APIs.</Description>
+    <PackageTags>unturned;rocketmod;plugin;adapter;bluebeard</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
