@@ -11,7 +11,6 @@ Plugins/BlueBeard.Zones/Configs/ZonesConfig.configuration.xml
 <?xml version="1.0" encoding="utf-8"?>
 <ZonesConfig>
   <StorageType>json</StorageType>
-  <EnableFlagEnforcement>true</EnableFlagEnforcement>
 </ZonesConfig>
 ```
 
@@ -23,13 +22,6 @@ Controls where zones and block lists are persisted.
 |---|---|
 | `json` (default) | Stores everything in a single `zones.json` file in the plugin directory. |
 | `mysql` | Stores data in MySQL tables `bb_zones` and `bb_zone_blocklists`. |
-
-### EnableFlagEnforcement
-
-| Value | Description |
-|---|---|
-| `true` (default) | The plugin subscribes to Unturned events and enforces all flags (no-damage, no-build, etc.). |
-| `false` | Flag enforcement is disabled. Zones still work for enter/exit detection, but flags have no effect. Useful in library-only mode where another plugin handles its own logic. |
 
 ## MySQL Configuration
 

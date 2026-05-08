@@ -131,20 +131,19 @@ if (zoneManager.Zones.TryGetValue("my_zone", out var gameObject))
 }
 ```
 
-## Library-Only Mode
+## Registering Custom Flags
 
-If you want to use BlueBeard.Zones purely as a library and handle your own flag logic, set `EnableFlagEnforcement` to `false` in the config. This disables all built-in flag handlers, but zones, events, and player tracking still work.
+Built-in flag enforcement is always on. To add your own flag, register it with `ZonesPlugin.Instance.FlagRegistry`. Two modes are available.
 
-```xml
-<ZonesConfig>
-  <StorageType>json</StorageType>
-  <EnableFlagEnforcement>false</EnableFlagEnforcement>
-</ZonesConfig>
-```
+### Name-only registration
 
-Then subscribe to events and implement your own logic:
+Use this when your plugin handles its own logic via zone events. The registered flag shows up in `/zone flag list` and admin tooling, but enforcement is your responsibility.
 
 ```csharp
+ZonesPlugin.Instance.FlagRegistry.RegisterFlag(
+    "myCustomFlag",
+    "Triggers my plugin's behavior on entry.");
+
 zoneManager.PlayerEnteredZone += (player, zone) =>
 {
     if (zone.Flags.ContainsKey("myCustomFlag"))
@@ -152,4 +151,22 @@ zoneManager.PlayerEnteredZone += (player, zone) =>
         // Your custom logic here
     }
 };
+```
+
+### Handler registration
+
+Use this when you want your flag to be enforced the same way as built-in flags. Implement `IFlagHandler` (or extend `FlagHandlerBase`) and register the handler -- the enforcement manager subscribes it on level-load and unsubscribes on plugin unload.
+
+```csharp
+ZonesPlugin.Instance.FlagRegistry.RegisterHandler(
+    new MyFlagHandler(ZonesPlugin.Instance.ZoneManager, ZonesPlugin.Instance.PlayerTracker),
+    "Does the thing.");
+```
+
+Handlers registered after the level has loaded are subscribed immediately. Handlers registered before are subscribed on level-load. Either ordering is safe.
+
+To remove a flag (e.g. on plugin unload), call `Unregister`:
+
+```csharp
+ZonesPlugin.Instance.FlagRegistry.Unregister("myCustomFlag");
 ```

@@ -6,19 +6,16 @@ This page documents the internal architecture of the flag system for developers 
 
 ```
 ZonesPlugin
-  └── FlagEnforcementManager
-        ├── DamageFlagHandler
-        ├── AccessFlagHandler
-        ├── BuildFlagHandler
-        ├── ItemEquipFlagHandler
-        ├── LockpickFlagHandler
-        ├── EnvironmentFlagHandler
-        ├── NotificationFlagHandler
-        ├── EffectFlagHandler
-        └── GroupFlagHandler
+  ├── FlagRegistry              (public; plugins register custom flags here)
+  │     ├── built-in flags (registered by FlagEnforcementManager.Initialize)
+  │     └── plugin-registered flags
+  │
+  └── FlagEnforcementManager    (subscribes/unsubscribes handler-bearing flags)
 ```
 
-The `FlagEnforcementManager` is created and loaded only when `EnableFlagEnforcement` is `true` in the config. It instantiates all flag handlers and manages their lifecycle.
+`FlagRegistry` is the single source of truth for all known flags. Each entry is either a name + description (admin tooling only) or a name + description + `IFlagHandler` (auto-subscribed by the enforcement manager).
+
+`FlagEnforcementManager` is always created. On `Load()` it subscribes every handler-bearing flag in the registry and hooks `HandlerRegistered` / `HandlerUnregistered` so plugin registrations made after level-load are subscribed immediately.
 
 ## IFlagHandler Interface
 
@@ -144,7 +141,15 @@ public class MyCustomFlagHandler : FlagHandlerBase
 }
 ```
 
-To register it, you would need to create your own enforcement manager or manually subscribe/unsubscribe in your plugin's `Load()` / `Unload()`.
+Register the handler with `FlagRegistry` from your plugin's `Load()`:
+
+```csharp
+ZonesPlugin.Instance.FlagRegistry.RegisterHandler(
+    new MyCustomFlagHandler(ZonesPlugin.Instance.ZoneManager, ZonesPlugin.Instance.PlayerTracker),
+    "Custom flag for my plugin.");
+```
+
+The enforcement manager will call `Subscribe()` immediately if the level is already loaded, or on the next `Load()` otherwise. To clean up on plugin unload, call `FlagRegistry.Unregister(handler.FlagName)` -- this triggers `Unsubscribe()`.
 
 ## Block List Integration
 

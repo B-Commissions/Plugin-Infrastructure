@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BlueBeard.Core.Commands;
 using Rocket.API;
@@ -9,14 +11,22 @@ internal class FlagListCommand : SubCommand
 {
     public override string Name => "list";
     public override string Permission => "zone.flag.list";
-    public override string Help => "List flags on a zone.";
+    public override string Help => "List flags on a zone, or all registered flags.";
     public override string Syntax => "[zoneId]";
 
     public override Task Execute(IRocketPlayer caller, string[] args)
     {
         if (args.Length < 1)
         {
-            CommandBase.Reply(caller, "Available flags: noDamage, noPlayerDamage, noVehicleDamage, noTireDamage, noAnimalDamage, noZombieDamage, noEnter, noLeave, noVehicleCarjack, noPvP, noBuild, noItemEquip, noLockpick, noZombie, noVehicleSiphoning, infiniteGenerator, enterMessage, leaveMessage, enterAddEffect, leaveAddEffect, enterRemoveEffect, leaveRemoveEffect, enterAddGroup, enterRemoveGroup, leaveAddGroup, leaveRemoveGroup", Color.cyan);
+            var registry = ZonesPlugin.Instance.FlagRegistry;
+            CommandBase.Reply(caller, "Available flags:", Color.cyan);
+            foreach (var info in registry.Flags.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                var line = string.IsNullOrEmpty(info.Description)
+                    ? $"  {info.Name}"
+                    : $"  {info.Name} - {info.Description}";
+                CommandBase.Reply(caller, line, Color.white);
+            }
             return Task.CompletedTask;
         }
 

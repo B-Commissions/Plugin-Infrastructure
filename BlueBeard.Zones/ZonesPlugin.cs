@@ -22,6 +22,7 @@ public class ZonesPlugin : RocketPlugin
     public BlockListManager BlockListManager { get; private set; }
     public PlayerTracker PlayerTracker { get; private set; }
     public ZoneBuilderManager ZoneBuilderManager { get; private set; }
+    public FlagRegistry FlagRegistry { get; private set; }
     public FlagEnforcementManager FlagEnforcement { get; private set; }
 
     private IZoneRepository _repository;
@@ -63,11 +64,9 @@ public class ZonesPlugin : RocketPlugin
         ZoneBuilderManager = new ZoneBuilderManager();
         ZoneBuilderManager.Initialize(ZoneManager);
 
-        if (config.EnableFlagEnforcement)
-        {
-            FlagEnforcement = new FlagEnforcementManager();
-            FlagEnforcement.Initialize(ZoneManager, PlayerTracker, BlockListManager);
-        }
+        FlagRegistry = new FlagRegistry();
+        FlagEnforcement = new FlagEnforcementManager(FlagRegistry);
+        FlagEnforcement.Initialize(ZoneManager, PlayerTracker, BlockListManager);
 
         Level.onLevelLoaded += OnLevelLoaded;
 
@@ -80,14 +79,14 @@ public class ZonesPlugin : RocketPlugin
         ZoneManager.Load();
         BlockListManager.Load();
         PlayerTracker.Load();
-        FlagEnforcement?.Load();
+        FlagEnforcement.Load();
     }
 
     protected override void Unload()
     {
         Level.onLevelLoaded -= OnLevelLoaded;
 
-        FlagEnforcement?.Unload();
+        FlagEnforcement.Unload();
         PlayerTracker?.Unload();
         ZoneBuilderManager?.Unload();
         BlockListManager?.Unload();
