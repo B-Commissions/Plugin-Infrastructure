@@ -61,44 +61,15 @@ jobs:
       - name: Determine projects to publish
         id: changes
         run: |
-          # Tag releases always publish all packages at the coordinated version.
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "Tag release — publishing all projects"
-            echo "projects=$(echo $ALL_PROJECTS | xargs)" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          BEFORE="${{ github.event.before }}"
-          AFTER="${{ github.event.after }}"
-
-          # New branch or force-push: no usable diff base. Publish everything to be safe.
-          if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
-            echo "No diff base (new branch or force-push) — publishing all projects"
-            echo "projects=$(echo $ALL_PROJECTS | xargs)" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          FILES=$(git diff --name-only "$BEFORE" "$AFTER")
-          echo "Files changed in this push:"
-          echo "$FILES" | sed 's/^/  /'
-
-          # Build infrastructure changes affect every package — rebuild all.
-          if echo "$FILES" | grep -qE '^(\.github/workflows/|.*\.sln$|Directory\.Build\.|nuget\.config$)'; then
-            echo "Build infrastructure changed — publishing all projects"
-            echo "projects=$(echo $ALL_PROJECTS | xargs)" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          CHANGED=""
-          for project in $ALL_PROJECTS; do
-            if echo "$FILES" | grep -q "^$project/"; then
-              CHANGED="$CHANGED $project"
-            fi
-          done
-          CHANGED=$(echo $CHANGED | xargs)
-
-          echo "projects=$CHANGED" >> "$GITHUB_OUTPUT"
-          echo "Will publish: ${CHANGED:-(none)}"
+          # Always publish all packages at the coordinated version. dotnet pack
+          # writes ProjectReference deps at the build-time version, so every
+          # downstream package's nupkg pins its upstream dep to the current run's
+          # version — which means every upstream must also be pushed at that
+          # version, or NuGet restore fails. Selective publishing is incompatible
+          # with this versioning model. NuGet's --skip-duplicate makes pushing
+          # unchanged packages cheap.
+          echo "Publishing all projects at the coordinated version"
+          echo "projects=$(echo $ALL_PROJECTS | xargs)" >> "$GITHUB_OUTPUT"
 
       - name: Restore
         if: steps.changes.outputs.projects != ''
