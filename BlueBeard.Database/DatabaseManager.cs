@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlueBeard.Core;
 using BlueBeard.Core.Configs;
-using BlueBeard.Core.Helpers;
 using MySqlConnector;
 using Rocket.Core.Logging;
 
@@ -56,9 +55,13 @@ public class DatabaseManager : IManager
 
     public void SyncSchema()
     {
-        ThreadHelper.RunAsynchronously(async () =>
+        // Block the caller until the schema is fully synced, so every table exists before
+        // any consumer queries it. Run via Task.Run so the async DB continuations resume on
+        // the thread pool (no captured SynchronizationContext) and GetResult() can't deadlock
+        // the RocketMod/Unity main thread.
+        try
         {
-            try
+            Task.Run(async () =>
             {
                 using var conn = CreateConnection();
                 await conn.OpenAsync();
@@ -70,12 +73,15 @@ public class DatabaseManager : IManager
                 }
 
                 Logger.Log("[Database] Schema sync complete.");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException(ex, "[Database] Failed to sync schema.");
-            }
-        });
+            }).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            // Log loudly, then rethrow — a missing schema must fail startup rather than
+            // silently leave tables uncreated and surface later as "table doesn't exist".
+            Logger.LogException(ex, "[Database] Failed to sync schema.");
+            throw;
+        }
     }
 
     public void Unload() => _dbSets.Clear();
