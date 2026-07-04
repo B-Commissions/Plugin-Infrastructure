@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using BlueBeard.Database.Attributes;
 using MySqlConnector;
 
 namespace BlueBeard.Database;
@@ -61,6 +62,8 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
 
     public async Task InsertAsync(T entity)
     {
+        await HookRunner.RunAsync(_metadata, HookKind.BeforeInsert, entity);
+
         var insertCols = _metadata.Columns.Where(c => !c.IsAutoIncrement).ToList();
         var colNames = string.Join(", ", insertCols.Select(c => $"`{c.ColumnName}`"));
         var paramNames = string.Join(", ", insertCols.Select((_, i) => $"@p{i}"));
@@ -82,12 +85,16 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
             var id = Convert.ChangeType(lastId, pk.ClrType);
             pk.PropertyInfo.SetValue(entity, id);
         }
+
+        await HookRunner.RunAsync(_metadata, HookKind.AfterInsert, entity);
     }
 
     public async Task UpdateAsync(T entity)
     {
         if (_metadata.PrimaryKey == null)
             throw new InvalidOperationException($"Cannot update {typeof(T).Name}: no primary key defined.");
+
+        await HookRunner.RunAsync(_metadata, HookKind.BeforeUpdate, entity);
 
         var updateCols = _metadata.Columns.Where(c => !c.IsPrimaryKey).ToList();
         var setClauses = updateCols.Select((c, i) => $"`{c.ColumnName}` = @p{i}").ToList();
@@ -108,12 +115,16 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
             EntityReader.ToParameter(_metadata.PrimaryKey, _metadata.PrimaryKey.PropertyInfo.GetValue(entity)));
 
         await cmd.ExecuteNonQueryAsync();
+
+        await HookRunner.RunAsync(_metadata, HookKind.AfterUpdate, entity);
     }
 
     public async Task DeleteAsync(T entity)
     {
         if (_metadata.PrimaryKey == null)
             throw new InvalidOperationException($"Cannot delete {typeof(T).Name}: no primary key defined.");
+
+        await HookRunner.RunAsync(_metadata, HookKind.BeforeDelete, entity);
 
         var sql = $"DELETE FROM `{_metadata.TableName}` WHERE `{_metadata.PrimaryKey.ColumnName}` = @p0;";
 
@@ -124,8 +135,15 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
             EntityReader.ToParameter(_metadata.PrimaryKey, _metadata.PrimaryKey.PropertyInfo.GetValue(entity)));
 
         await cmd.ExecuteNonQueryAsync();
+
+        await HookRunner.RunAsync(_metadata, HookKind.AfterDelete, entity);
     }
 
+    /// <summary>
+    /// Bulk delete by predicate. Lifecycle hooks do NOT fire — no entity instances exist
+    /// to call them on (same semantics as EF bulk operations). Use the entity overload
+    /// when hooks matter.
+    /// </summary>
     public async Task DeleteAsync(Expression<Func<T, bool>> predicate)
     {
         var (whereSql, parameters) = SqlWhereVisitor.Translate(predicate);

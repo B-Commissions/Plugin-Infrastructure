@@ -2,7 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using BlueBeard.Database.Attributes;
 using BlueBeard.Database.Converters;
 
@@ -54,6 +56,23 @@ public class IndexInfo
     public List<ColumnInfo> Columns { get; set; }
 }
 
+/// <summary>
+/// A validated lifecycle hook discovered from a [Before*/After*] attribute. The invoker
+/// is compiled once at metadata build — no per-call reflection.
+/// </summary>
+public class HookInfo
+{
+    public HookKind Kind { get; set; }
+
+    /// <summary>Target column for column-level hooks; null for entity-level.</summary>
+    public ColumnInfo TargetColumn { get; set; }
+
+    public MethodInfo Method { get; set; }
+
+    /// <summary>(entity, columnValue-or-null) → completion. Sync methods return Task.CompletedTask.</summary>
+    internal Func<object, object, Task> Invoker { get; set; }
+}
+
 public class TableMetadata
 {
     private static readonly ConcurrentDictionary<Type, TableMetadata> Cache = new();
@@ -64,6 +83,7 @@ public class TableMetadata
     public ColumnInfo PrimaryKey { get; }
     public List<NavigationInfo> Navigations { get; }
     public List<IndexInfo> Indexes { get; }
+    public List<HookInfo> Hooks { get; }
 
     private TableMetadata(Type clrType, string tableName, List<ColumnInfo> columns, List<NavigationInfo> navigations)
     {
@@ -73,6 +93,7 @@ public class TableMetadata
         PrimaryKey = columns.FirstOrDefault(c => c.IsPrimaryKey);
         Navigations = navigations;
         Indexes = BuildIndexes(tableName, columns);
+        Hooks = BuildHooks(clrType, columns);
     }
 
     public static TableMetadata For<T>() => For(typeof(T));
@@ -249,6 +270,107 @@ public class TableMetadata
         }
 
         return indexes;
+    }
+
+    private static List<HookInfo> BuildHooks(Type type, List<ColumnInfo> columns)
+    {
+        var hooks = new List<HookInfo>();
+
+        // Includes inherited public/protected methods; private hooks work on the declaring
+        // type itself (the overwhelmingly common case). MetadataToken keeps declaration order
+        // deterministic.
+        var methods = type
+            .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+            .Where(m => !m.IsSpecialName)
+            .OrderBy(m => m.MetadataToken);
+
+        foreach (var method in methods)
+        {
+            foreach (var attr in method.GetCustomAttributes<LifecycleHookAttribute>())
+            {
+                hooks.Add(BuildHook(type, columns, method, attr));
+            }
+        }
+
+        return hooks;
+    }
+
+    private static HookInfo BuildHook(Type type, List<ColumnInfo> columns, MethodInfo method, LifecycleHookAttribute attr)
+    {
+        string Describe() => $"[{attr.GetType().Name.Replace("Attribute", "")}] on {type.Name}.{method.Name}";
+
+        if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
+            throw new InvalidOperationException(
+                $"{Describe()}: hook methods must return void or Task, not {method.ReturnType.Name}.");
+
+        var parameters = method.GetParameters();
+        ColumnInfo targetColumn = null;
+
+        if (attr.Column == null)
+        {
+            if (parameters.Length != 0)
+                throw new InvalidOperationException(
+                    $"{Describe()}: entity-level hooks must be parameterless. " +
+                    $"To receive a column value, target the column: [{attr.GetType().Name.Replace("Attribute", "")}(\"column_name\")].");
+        }
+        else
+        {
+            // Column-name literal first (durable under obfuscation), property name as fallback.
+            targetColumn = columns.FirstOrDefault(c => string.Equals(c.ColumnName, attr.Column, StringComparison.OrdinalIgnoreCase))
+                ?? columns.FirstOrDefault(c => string.Equals(c.PropertyName, attr.Column, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException(
+                    $"{Describe()}: target column '{attr.Column}' is not a mapped column on {type.Name}. " +
+                    $"Use the column name (the [Column(\"...\")] literal) — property names do not survive obfuscation.");
+
+            if (parameters.Length != 1)
+                throw new InvalidOperationException(
+                    $"{Describe()}: column-targeted hooks must take exactly one parameter of the column's CLR type " +
+                    $"({FriendlyTypeName(targetColumn.ClrType)}).");
+
+            var paramType = parameters[0].ParameterType;
+            var columnType = targetColumn.ClrType;
+            var accepted = paramType == columnType
+                || paramType == Nullable.GetUnderlyingType(columnType)  // int hook for int? column
+                || Nullable.GetUnderlyingType(paramType) == columnType  // int? hook for int column
+                || paramType.IsAssignableFrom(columnType);
+            if (!accepted)
+                throw new InvalidOperationException(
+                    $"{Describe()}: parameter type {FriendlyTypeName(paramType)} does not match column " +
+                    $"'{targetColumn.ColumnName}' of type {FriendlyTypeName(columnType)}.");
+        }
+
+        return new HookInfo
+        {
+            Kind = attr.Kind,
+            TargetColumn = targetColumn,
+            Method = method,
+            Invoker = CompileInvoker(type, method, targetColumn == null ? null : method.GetParameters()[0].ParameterType)
+        };
+    }
+
+    /// <summary>
+    /// Compile (object entity, object arg) => Task once per hook so dispatch never reflects.
+    /// </summary>
+    private static Func<object, object, Task> CompileInvoker(Type type, MethodInfo method, Type paramType)
+    {
+        var entityParam = Expression.Parameter(typeof(object), "entity");
+        var argParam = Expression.Parameter(typeof(object), "arg");
+
+        var call = paramType == null
+            ? Expression.Call(Expression.Convert(entityParam, type), method)
+            : Expression.Call(Expression.Convert(entityParam, type), method, Expression.Convert(argParam, paramType));
+
+        Expression body = method.ReturnType == typeof(Task)
+            ? call
+            : Expression.Block(call, Expression.Constant(Task.CompletedTask, typeof(Task)));
+
+        return Expression.Lambda<Func<object, object, Task>>(body, entityParam, argParam).Compile();
+    }
+
+    private static string FriendlyTypeName(Type t)
+    {
+        var underlying = Nullable.GetUnderlyingType(t);
+        return underlying != null ? underlying.Name + "?" : t.Name;
     }
 
     private static Type TryGetCollectionElementType(Type t)
