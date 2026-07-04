@@ -3,6 +3,15 @@ name: Build & Publish NuGet
 on:
   push:
     branches: [main]
+    # Docs-only pushes must not mint a new CI package set — the binaries would be
+    # identical to the previous run. NOTE: per-project README.md files are deliberately
+    # NOT ignored: they are packed into the nupkgs (Pack="true"), so changing one really
+    # does change package content. A push mixing docs and code still publishes.
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - '.github/workflows/wiki.yml'
+      - '.idea/**'
   create:
     tags:
       - 'v*'

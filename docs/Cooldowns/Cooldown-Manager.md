@@ -60,3 +60,12 @@ cooldowns.CancelByPrefix($"ability.{steamId}.");  // all ability slots for one p
 cooldowns.CancelByPrefix("shop.restock.");         // every shop's restock
 cooldowns.CancelByPrefix("event.");                // every global event
 ```
+
+## Diagnostics: Snapshot() and Sweep()
+
+- `Snapshot()` returns a copy of every tracked key with its UTC expiry (including entries
+  that expired but haven't been lazily removed yet) — useful for admin/debug commands.
+- `Sweep()` removes all expired entries immediately and returns how many were removed.
+  Expiry is normally lazy (checked on access), so keys that are Started once and never
+  queried linger in memory; call `Sweep()` from a periodic plugin timer if you track many
+  one-shot keys.

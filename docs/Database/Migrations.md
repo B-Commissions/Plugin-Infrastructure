@@ -88,10 +88,10 @@ You may still see unnecessary `MODIFY`s in edge cases involving collations, char
 - **Drop columns.** A column you've removed from an entity stays in the database. Drop it manually if you want it gone.
 - **Drop tables.** A type you've stopped registering doesn't get its table dropped.
 - **Add or drop foreign keys** on existing tables. `[ForeignKey]` is only emitted on initial `CREATE`.
-- **Add or drop indexes.** No automatic index management at all (yet).
-- **Move or rename anything.** Renaming a property creates a new column and leaves the old one behind. Either rename via SQL first, or accept the duplicate.
+- **Drop indexes.** Missing `[Unique]`/`[Index]` indexes ARE created (matched by name), but nothing is ever dropped.
+- **Move or rename anything.** Renaming a property creates a new column and leaves the old one behind. Either rename via a versioned `IMigration` step, or accept the duplicate.
 
-If any of those matter to you, drop down to manual `ALTER` statements via `DatabaseManager.WithConnectionAsync` or `DbSet<T>.ExecuteSqlAsync`.
+If any of those matter to you, use versioned `IMigration` steps (see below) or manual `ALTER` statements via `DatabaseManager.WithConnectionAsync` / `DbSet<T>.ExecuteSqlAsync`.
 
 ---
 

@@ -149,3 +149,10 @@ This can be useful for debugging or for building admin commands that list runnin
 | `Start(definition, audience)` | Creates and starts a new emitter. Returns the `EffectEmitter`. |
 | `Stop(emitter)` | Stops a specific emitter and destroys its `GameObject`. |
 | `Emitters` | Read-only list of all active `EffectEmitter` instances. |
+
+## Emitter lifecycle notes
+
+- `EffectEmitter.IsAlive` is false once a one-shot emitter has finished or its GameObject
+  was destroyed — check it before poking a cached emitter reference.
+- One-shot definitions complete synchronously inside `Start(...)`: the `Completed` event
+  and the manager's cleanup have already run by the time `Start` returns.

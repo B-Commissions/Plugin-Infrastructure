@@ -138,3 +138,11 @@ ThreadHelper.RunAsynchronously(async () =>
 ```
 
 All database operations are async and must run off the main thread. See [Queries](Queries) for the full API reference.
+## Async startup and versioned migrations
+
+- `Load()` blocks until every table exists (unchanged). `LoadAsync()` is the same thing
+  awaitable, for consumers that keep startup off the main thread.
+- `RegisterMigration(new MyMigration())` registers run-once versioned steps (renames,
+  backfills) that execute after schema sync — see [Migrations](Migrations).
+- `BeginTransactionAsync()` is the entry point for atomic multi-write operations — see
+  [Queries](Queries).

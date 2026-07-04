@@ -317,3 +317,16 @@ zone.flag.list    - List flags
 ```
 
 Note: Console callers bypass all permission checks. Permission checking only applies to `UnturnedPlayer` instances.
+
+## Thread safety after await
+
+Subcommand `Execute` methods are async, and Unturned installs no SynchronizationContext —
+code after an `await` resumes on a thread-pool thread. `CommandBase.Reply` is safe to call
+from anywhere: it detects off-main-thread calls and marshals `UnturnedChat.Say` back
+through `ThreadHelper.RunSynchronously`. Any OTHER Unturned API you call after an `await`
+must be marshalled yourself.
+
+## SubCommandGroup.Children
+
+Groups expose their subcommands via the `Children` property (registration order) — used by
+`CommandDocGenerator` to document nested groups, and available for custom help commands.

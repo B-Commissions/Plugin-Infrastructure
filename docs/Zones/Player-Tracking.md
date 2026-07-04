@@ -79,3 +79,19 @@ This means:
 3. For polygon zones: point-in-polygon test using ray casting
 
 These methods are useful for checking positions that aren't tied to a specific player (e.g., where a barricade is being placed).
+
+## Effective membership (height + true shape)
+
+The tracker's membership — and therefore every query on this page — is *effective*
+membership: inside the trigger collider AND within the zone's height band AND (for polygon
+zones) inside the true polygon. A periodic re-check (~0.5s, only for zones that need it)
+transitions membership as players move vertically or across concave notches, firing the
+tracker's own `PlayerEnteredZone` / `PlayerExitedZone` events.
+
+Prefer subscribing to `PlayerTracker.PlayerEnteredZone`/`PlayerExitedZone` over the raw
+`ZoneManager` events: the raw events fire on collider contact only, with no height or
+concave-shape filtering. The built-in flag handlers all use the tracker events.
+
+The geometry helpers are public and pure for reuse and testing:
+`PlayerTracker.IsPointInPolygon`, `IsWithinHeightBounds(float y, ...)`, and
+`IsPositionInZone`.

@@ -155,3 +155,10 @@ foreach (var (player, def) in hologramManager.GetPlayerAssignments())
     Logger.Log($"{player.channel.owner.playerID.playerName} is viewing hologram at {def.Position}");
 }
 ```
+
+## PoolExhausted event
+
+`HologramManager.PoolExhausted(Player, HologramDefinition)` fires when a player enters a
+hologram zone but every pool slot is taken (that player sees nothing). Previously this was
+only a log line; now consumers can react — grow the pool, alert an admin, or queue the
+player for the next free slot.

@@ -71,3 +71,35 @@ var bus2 = manager.GetOrCreate<FactionAction>();
 manager.Unload();
 // All buses cleared; subscribers on bus1/bus2 no longer fire.
 ```
+
+## Disposal, priority, and PublishCancelable
+
+`Subscription` implements `IDisposable` — disposing unsubscribes, so handles compose with
+`using` blocks and aggregate disposal lists:
+
+```csharp
+_subscriptions.Add(bus.Subscribe(ShopAction.Purchase, OnPurchase));
+// on unload:
+foreach (var sub in _subscriptions) sub.Dispose();
+```
+
+`Subscribe` has a priority overload — higher priorities run first, equal priorities in
+subscription order (the two-argument overload uses priority 0):
+
+```csharp
+bus.Subscribe(ShopAction.Purchase, Validate, priority: 100);  // runs before default handlers
+bus.Subscribe(ShopAction.Purchase, Log, priority: -100);      // runs last
+```
+
+`PublishCancelable` publishes and returns whether any subscriber set `Cancelled`:
+
+```csharp
+if (bus.PublishCancelable(ShopAction.Purchase, ctx)) return; // a subscriber vetoed
+```
+
+## Thread safety
+
+Subscribe/Unsubscribe/Publish/Clear are safe to call from any thread; the subscriber list
+is lock-guarded and Publish dispatches from a snapshot taken under the lock. Handlers run
+OUTSIDE the lock, so reentrant subscribe/unsubscribe from inside a handler cannot deadlock.
+Handlers themselves run synchronously on whatever thread called Publish.

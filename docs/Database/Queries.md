@@ -329,6 +329,10 @@ The `SqlWhereVisitor` translates LINQ expressions into parameterized SQL WHERE c
 | `== null`            | `IS NULL`           |
 | `!= null`            | `IS NOT NULL`       |
 | `!expression`        | `NOT expression`    |
+| `x.Name.Contains(s)` | `LIKE '%s%'` (wildcards escaped) |
+| `x.Name.StartsWith(s)` / `EndsWith(s)` | `LIKE 's%'` / `LIKE '%s'` |
+| `string.IsNullOrEmpty(x.Name)` | `(col IS NULL OR col = '')` |
+| `list.Contains(x.Id)` | `IN (@p0, @p1, ...)` (empty list matches nothing) |
 
 **Variable capture:** When you reference a local variable or field in the expression (e.g., `f => f.SteamId == steamId`), the visitor evaluates the variable at execution time and adds it as a parameter (`@p0`, `@p1`, etc.). This prevents SQL injection.
 
@@ -336,7 +340,10 @@ The `SqlWhereVisitor` translates LINQ expressions into parameterized SQL WHERE c
 
 **Type conversions:** Implicit casts (e.g., enum to int) are handled transparently via the `Convert` unary expression visitor.
 
-For anything the visitor doesn't support — `LIKE`, `IN`, function calls, joins — drop down to `QuerySqlAsync` or `WithConnectionAsync`.
+For anything the visitor doesn't support — joins, aggregates in predicates, arbitrary
+function calls on columns — drop down to `QuerySqlAsync` or `WithConnectionAsync`.
+Untranslatable methods called on entity properties throw `NotSupportedException` listing
+what IS supported, rather than sending malformed SQL to the server.
 
 ---
 

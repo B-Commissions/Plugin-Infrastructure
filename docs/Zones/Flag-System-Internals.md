@@ -168,3 +168,16 @@ BlockListManager.IsItemInBlockList("weapons", barricade.id)
 ```
 
 If the flag has no value (empty string), all items are blocked.
+
+## HandledFlags metadata
+
+Handler registrations are group labels ("damage", "access") — not settable flag keys. The
+registry now carries the actual keys each handler enforces:
+
+```csharp
+registry.RegisterHandler(new MyFlagHandler(...), "My custom flags.", "myFlag", "myOtherFlag");
+```
+
+`FlagInfo.HandledFlags` exposes them, and `/zone flag list` advertises these keys instead
+of the group name. The two-argument `RegisterHandler` overload still works and simply
+declares no keys.

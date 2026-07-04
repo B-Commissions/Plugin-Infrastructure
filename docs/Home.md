@@ -4,6 +4,22 @@ Welcome to the BlueBeard Infrastructure documentation. Each library has its own 
 
 ## What's new
 
+All changes are additive — existing plugins keep compiling and running without modification.
+
+- **Full-fledged ORM column model**: `[Required]` / `[Column(Nullable = ...)]`, `[DefaultValue]`, `[Unique]`, `[Index]` (incl. composites), `[MaxLength]`; schema sync diffs type, nullability, and default independently (no more phantom `MODIFY COLUMN` on every restart). See [Database: Entities](Database/Entities.md).
+- **Entity lifecycle hooks**: `[BeforeInsert]`/`[AfterUpdate]`/etc. methods on entities, including column-targeted hooks with typed parameters. See [Database: Lifecycle Hooks](Database/Lifecycle-Hooks.md).
+- **Transactions, batch ops, composable queries**: `BeginTransactionAsync`, `InsertRangeAsync`/`UpdateRangeAsync`, `Query().Where().OrderBy().Take()`, `CountAsync`/`AnyAsync`, `LIKE`/`IN` expression translation, deadlock retry, versioned `IMigration` steps. See [Database: Queries](Database/Queries.md) and [Migrations](Database/Migrations.md).
+- **Obfuscation-durable relationships**: parameterless `[HasMany]`/`[BelongsTo]` and `[ForeignKey(typeof(T))]` resolve via type tokens instead of property-name strings. See [Database: Relationships](Database/Relationships.md).
+- **Config validation**: `[Range]`, `[NotEmpty]`, `[RegexMatch]`, `[OneOf]`, `[ValidateNested]` with clamp/reset auto-correction — works on `IRocketPluginConfiguration`, `IConfig`, or any class. See [Core: Configuration](Core/Configuration.md).
+- **Zones correctness**: height bounds enforced continuously and by every flag; concave polygon zones follow the true shape; `ZoneDestroyed` event; robust `noEnter` pushback; `noItemEquip` covers equip-after-entry. See [Zones: Player Tracking](Zones/Player-Tracking.md).
+- **Host services**: `BlueBeardHost.PermissionsAsync` (natively async under OpenMod) and `BlueBeardHost.Translations` (Rocket Translations / OpenMod IStringLocalizer). The OpenMod dispatcher is now genuinely thread-safe. See [Mod-Host Adapters](Mods/Abstractions.md).
+- **UI helpers**: `UIElements` typed element writes and `UIPagination<T>` paged lists. See [UI: Player State](UI/Player-State.md).
+- **Event bus ergonomics**: disposable subscriptions, handler priorities, `PublishCancelable`, thread safety. See [Events: Event Bus](Events/Event-Bus.md).
+- **Tagged item-state blocks**: versioned magic-header convention on `StateWriter`/`StateReader` for evolvable custom state. See [Items: State Encoding](Items/State-Encoding.md).
+- **Removed**: the MiniGames library has been retired and is no longer published.
+
+Previous release highlights:
+
 - **Dual mod-host support**: BlueBeard libraries can run under either RocketMod or OpenMod via thin adapter assemblies. See [Mod-Host Adapters](Mods/Home.md).
 - **Behaviour managers for six entity types**: items, barricades, structures, vehicles, zombies, animals — same registry shape for all. See [Items: Behaviour Registry](Items/Behaviour-Registry.md).
 - **Cursor state writer**: `StateWriter` / `StateReader` track byte position automatically; the existing `ItemStateEncoder` static API stays available for explicit-offset use cases. See [Items: State Encoding](Items/State-Encoding.md).
