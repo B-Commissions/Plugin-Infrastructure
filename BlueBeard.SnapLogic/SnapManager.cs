@@ -46,6 +46,12 @@ public class SnapManager : IManager
     public event Action<SnapHost> OnHostDestroyed;
 
     /// <summary>
+    /// Like <see cref="OnHostDestroyed"/> but with the removal reason. Both events fire;
+    /// subscribe to this one when the cause matters.
+    /// </summary>
+    public event Action<SnapHost, HostRemovalReason> OnHostRemoved;
+
+    /// <summary>
     /// Initializes the manager with optional configuration. If null, defaults are used.
     /// </summary>
     public void Initialize(SnapLogicConfig config = null)
@@ -77,7 +83,7 @@ public class SnapManager : IManager
 
         var hostsToRemove = _hosts.Values.Where(h => h.DefinitionId == id).ToList();
         foreach (var host in hostsToRemove)
-            RemoveHost(host);
+            RemoveHost(host, HostRemovalReason.Unregistered);
     }
 
     public void Load()
@@ -103,6 +109,9 @@ public class SnapManager : IManager
 
         _hosts.Clear();
         _childToHost.Clear();
+        // Clear registrations too so a plugin reload starts from a clean slate.
+        _definitions.Clear();
+        _assetToDefinition.Clear();
     }
 
     /// <summary>
@@ -125,7 +134,7 @@ public class SnapManager : IManager
         {
             // Same child policy as the salvage path.
             ClearHost(host, destroyBarricades: _config.DestroyChildrenWithHost);
-            RemoveHost(host);
+            RemoveHost(host, HostRemovalReason.Destroyed);
         }
     }
 
@@ -399,11 +408,13 @@ public class SnapManager : IManager
             else
                 ClearHost(host, destroyBarricades: false);
 
-            RemoveHost(host);
+            RemoveHost(host, HostRemovalReason.Salvaged);
         }
     }
 
-    private void RemoveHost(SnapHost host)
+    private void RemoveHost(SnapHost host) => RemoveHost(host, HostRemovalReason.Destroyed);
+
+    private void RemoveHost(SnapHost host, HostRemovalReason reason)
     {
         _hosts.Remove(host.HostInstanceId);
 
@@ -413,6 +424,7 @@ public class SnapManager : IManager
         host.Attachments.Clear();
 
         OnHostDestroyed?.Invoke(host);
+        OnHostRemoved?.Invoke(host, reason);
     }
 
     private static void DestroyBarricade(BarricadeDrop drop)

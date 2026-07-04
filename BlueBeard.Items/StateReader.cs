@@ -87,4 +87,25 @@ public sealed class StateReader
         _pos += maxBytes;
         return value;
     }
+
+    /// <summary>
+    /// Try to read a tagged-block header written by <see cref="StateWriter.WriteBlockHeader"/>.
+    /// On a magic mismatch (or insufficient bytes) the cursor is restored and false is
+    /// returned — safe to probe state that may predate the block convention.
+    /// </summary>
+    public bool TryReadBlockHeader(ushort expectedMagic, out ushort version)
+    {
+        version = 0;
+        if (Remaining < 4) return false;
+
+        var saved = _pos;
+        var magic = ReadUInt16();
+        if (magic != expectedMagic)
+        {
+            _pos = saved;
+            return false;
+        }
+        version = ReadUInt16();
+        return true;
+    }
 }

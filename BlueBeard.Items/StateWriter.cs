@@ -93,5 +93,15 @@ public sealed class StateWriter
         return this;
     }
 
+    /// <summary>
+    /// Write a 4-byte tagged-block header (magic + version) in front of custom state so
+    /// shipped plugins can evolve their layout without offset math: bump the version when
+    /// the payload changes, and readers branch via
+    /// <see cref="StateReader.TryReadBlockHeader"/>. Plain UInt16 writes underneath —
+    /// fully compatible with the static encoder.
+    /// </summary>
+    public StateWriter WriteBlockHeader(ushort magic, ushort version) =>
+        WriteUInt16(magic).WriteUInt16(version);
+
     public byte[] ToArray() => _state;
 }

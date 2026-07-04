@@ -114,6 +114,27 @@ public class CooldownManager(Func<DateTime> utcNow) : IManager
     public int Count => _cooldowns.Count;
 
     /// <summary>
+    /// Diagnostic snapshot of every tracked cooldown and its expiry (UTC), including
+    /// entries that have expired but not yet been lazily removed.
+    /// </summary>
+    public IReadOnlyDictionary<string, DateTime> Snapshot() =>
+        new Dictionary<string, DateTime>(_cooldowns);
+
+    /// <summary>
+    /// Remove every expired entry now. Expiry is normally lazy (on access), so keys that
+    /// are Started once and never queried linger — call this periodically from a plugin
+    /// timer if the manager tracks many one-shot keys.
+    /// </summary>
+    public int Sweep()
+    {
+        var now = _utcNow();
+        var expired = _cooldowns.Where(kvp => now >= kvp.Value).Select(kvp => kvp.Key).ToList();
+        foreach (var key in expired)
+            _cooldowns.Remove(key);
+        return expired.Count;
+    }
+
+    /// <summary>
     /// Snapshot of the current cooldown keys. Used by subclasses (e.g.
     /// <c>PersistentCooldownManager</c>) to iterate keys for bulk operations without
     /// exposing the backing dictionary.

@@ -24,6 +24,9 @@ namespace BlueBeard.Items;
 public class ItemBehaviourManager : EntityBehaviourRegistry<ushort, IItemBehaviour>
 {
     private readonly Dictionary<ulong, ushort> _lastEquipped = new();
+    // The jar handed to OnEquipped, cached so OnDequipped can identify the item —
+    // Unturned's equipment no longer references it by the time the change event fires.
+    private readonly Dictionary<ulong, ItemJar> _lastEquippedJar = new();
 
     public override void Load()
     {
@@ -39,6 +42,7 @@ public class ItemBehaviourManager : EntityBehaviourRegistry<ushort, IItemBehavio
         U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
 
         _lastEquipped.Clear();
+        _lastEquippedJar.Clear();
         base.Unload();
     }
 
@@ -91,19 +95,20 @@ public class ItemBehaviourManager : EntityBehaviourRegistry<ushort, IItemBehavio
         {
             if (Behaviours.TryGetValue(previousId, out var prevBehaviour))
             {
-                // We don't have the original ItemJar anymore; pass null. Handlers that need
-                // the jar reference should capture it in OnEquipped.
-                prevBehaviour.OnDequipped(equipment.player, null);
+                // Hand back the jar cached at equip time so dequip handlers can identify
+                // the item (may still be null for items equipped before this manager loaded).
+                _lastEquippedJar.TryGetValue(steamId, out var previousJar);
+                prevBehaviour.OnDequipped(equipment.player, previousJar);
             }
+            _lastEquippedJar.Remove(steamId);
         }
 
         if (currentId != 0 && currentId != previousId)
         {
+            var jar = BuildEquippedJar(equipment);
+            _lastEquippedJar[steamId] = jar;
             if (Behaviours.TryGetValue(currentId, out var currBehaviour))
-            {
-                var jar = BuildEquippedJar(equipment);
                 currBehaviour.OnEquipped(equipment.player, jar);
-            }
         }
 
         _lastEquipped[steamId] = currentId;
@@ -126,5 +131,6 @@ public class ItemBehaviourManager : EntityBehaviourRegistry<ushort, IItemBehavio
     private void OnPlayerDisconnected(UnturnedPlayer player)
     {
         _lastEquipped.Remove(player.CSteamID.m_SteamID);
+        _lastEquippedJar.Remove(player.CSteamID.m_SteamID);
     }
 }

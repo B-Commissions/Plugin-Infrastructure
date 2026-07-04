@@ -18,6 +18,9 @@ public static class BlueBeardHost
     private static IPermissions _permissions;
     private static ITaskDispatcher _dispatcher;
     private static IPlayerEvents _playerEvents;
+    private static IPermissionsAsync _permissionsAsync;
+    private static ITranslations _translations;
+    private static readonly ITranslations PassthroughTranslator = new PassthroughTranslations();
 
     public static ILogger Logger
         => _logger ?? throw NotInitialized(nameof(ILogger));
@@ -33,6 +36,20 @@ public static class BlueBeardHost
 
     public static IPlayerEvents PlayerEvents
         => _playerEvents ?? throw NotInitialized(nameof(IPlayerEvents));
+
+    /// <summary>
+    /// Async permissions. Natively async under OpenMod; wraps the synchronous
+    /// <see cref="Permissions"/> when the adapter installs no dedicated implementation.
+    /// </summary>
+    public static IPermissionsAsync PermissionsAsync
+        => _permissionsAsync ??= new SyncPermissionsAsyncWrapper(Permissions);
+
+    /// <summary>
+    /// Message translation. Never null — falls back to a passthrough (key + formatting)
+    /// when the adapter installs no translator, so callers need no null checks.
+    /// </summary>
+    public static ITranslations Translations
+        => _translations ?? PassthroughTranslator;
 
     public static bool IsConfigured =>
         _logger != null || _chat != null || _permissions != null || _dispatcher != null || _playerEvents != null;
@@ -55,6 +72,18 @@ public static class BlueBeardHost
         if (playerEvents != null) _playerEvents = playerEvents;
     }
 
+    /// <summary>
+    /// Install the optional extended services (kept out of <see cref="Configure"/> so the
+    /// original signature stays binary-stable for already-compiled bootstraps).
+    /// </summary>
+    public static void ConfigureExtras(
+        IPermissionsAsync permissionsAsync = null,
+        ITranslations translations = null)
+    {
+        if (permissionsAsync != null) _permissionsAsync = permissionsAsync;
+        if (translations != null) _translations = translations;
+    }
+
     /// <summary>Clear all installed services. Intended for plugin reloads and tests.</summary>
     public static void Reset()
     {
@@ -63,6 +92,8 @@ public static class BlueBeardHost
         _permissions = null;
         _dispatcher = null;
         _playerEvents = null;
+        _permissionsAsync = null;
+        _translations = null;
     }
 
     private static InvalidOperationException NotInitialized(string serviceName) =>

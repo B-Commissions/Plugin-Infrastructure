@@ -39,6 +39,21 @@ public static class OpenModBootstrap
             permissions: new OpenModPermissions(permissionChecker, permissionRoleStore, userDirectory),
             dispatcher: new OpenModTaskDispatcher(),
             playerEvents: _playerEvents);
+
+        // Natively async permissions — prefer BlueBeardHost.PermissionsAsync in async code
+        // to avoid the sync shim's sync-over-async blocking.
+        BlueBeardHost.ConfigureExtras(
+            permissionsAsync: new OpenModPermissionsAsync(permissionChecker, permissionRoleStore, userDirectory));
+    }
+
+    /// <summary>
+    /// Bind an OpenMod <c>IStringLocalizer</c> (typically the plugin's) to
+    /// <see cref="BlueBeardHost.Translations"/>.
+    /// </summary>
+    public static void InstallTranslations(Microsoft.Extensions.Localization.IStringLocalizer localizer)
+    {
+        if (localizer == null) return;
+        BlueBeardHost.ConfigureExtras(translations: new OpenModTranslations(localizer));
     }
 
     public static void Uninstall()

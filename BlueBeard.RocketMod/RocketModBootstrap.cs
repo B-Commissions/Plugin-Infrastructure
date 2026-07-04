@@ -1,4 +1,5 @@
 using BlueBeard.Core.Abstractions;
+using Rocket.API;
 
 namespace BlueBeard.RocketMod;
 
@@ -20,6 +21,25 @@ public static class RocketModBootstrap
             permissions: new RocketPermissions(),
             dispatcher: new RocketTaskDispatcher(),
             playerEvents: _playerEvents);
+    }
+
+    /// <summary>
+    /// Install with the plugin's Rocket translations bound to
+    /// <see cref="BlueBeardHost.Translations"/>.
+    /// </summary>
+    public static void Install(IRocketPlugin plugin)
+    {
+        Install();
+        InstallTranslations(plugin);
+    }
+
+    /// <summary>
+    /// Bind a plugin's Rocket <c>Translations</c> to <see cref="BlueBeardHost.Translations"/>.
+    /// </summary>
+    public static void InstallTranslations(IRocketPlugin plugin)
+    {
+        if (plugin == null) return;
+        BlueBeardHost.ConfigureExtras(translations: new RocketTranslations(plugin));
     }
 
     public static void Uninstall()

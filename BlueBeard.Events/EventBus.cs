@@ -12,6 +12,9 @@ public interface IEventBus
 {
     void Clear();
     int SubscriberCount { get; }
+
+    /// <summary>Remove a previously registered subscription (used by <see cref="Subscription.Dispose"/>).</summary>
+    void Unsubscribe(Subscription subscription);
 }
 
 /// <summary>
@@ -35,28 +38,44 @@ public class EventBus<TAction> : IEventBus where TAction : struct, Enum
     {
         public long Id;
         public long Mask;
+        public int Priority;
         public Action<TAction, EventContext<TAction>> Handler;
     }
 
     /// <summary>
     /// Subscribe a handler to one or more actions. Returns a <see cref="Subscription"/>
-    /// handle that can be passed to <see cref="Unsubscribe"/>.
+    /// handle that can be passed to <see cref="Unsubscribe"/> or simply disposed.
     /// </summary>
-    public Subscription Subscribe(TAction mask, Action<TAction, EventContext<TAction>> handler)
+    public Subscription Subscribe(TAction mask, Action<TAction, EventContext<TAction>> handler) =>
+        Subscribe(mask, handler, priority: 0);
+
+    /// <summary>
+    /// Subscribe with an explicit priority: higher-priority handlers run first;
+    /// equal priorities run in subscription order. The parameterless overload uses 0.
+    /// </summary>
+    public Subscription Subscribe(TAction mask, Action<TAction, EventContext<TAction>> handler, int priority)
     {
         if (handler == null) throw new ArgumentNullException(nameof(handler));
 
         var id = Interlocked.Increment(ref _nextId);
         lock (_sync)
         {
-            _entries.Add(new Entry
+            var entry = new Entry
             {
                 Id = id,
                 Mask = Convert.ToInt64(mask),
+                Priority = priority,
                 Handler = handler,
-            });
+            };
+
+            // Keep the list ordered (priority desc, then insertion order) so Publish's
+            // snapshot needs no per-dispatch sort.
+            var index = _entries.Count;
+            while (index > 0 && _entries[index - 1].Priority < priority)
+                index--;
+            _entries.Insert(index, entry);
         }
-        return new Subscription(id);
+        return new Subscription(id, this);
     }
 
     /// <summary>Remove a previously registered subscription.</summary>
@@ -101,6 +120,19 @@ public class EventBus<TAction> : IEventBus where TAction : struct, Enum
             if ((entry.Mask & actionBits) != 0)
                 entry.Handler(action, context);
         }
+    }
+
+    /// <summary>
+    /// Publish and report whether any subscriber set <see cref="EventContext{TAction}.Cancelled"/> —
+    /// removes the check-the-flag boilerplate at cancellable call sites:
+    /// <code>
+    /// if (bus.PublishCancelable(ShopAction.Purchase, ctx)) return; // a subscriber vetoed
+    /// </code>
+    /// </summary>
+    public bool PublishCancelable(TAction action, EventContext<TAction> context)
+    {
+        Publish(action, context);
+        return context.Cancelled;
     }
 
     /// <summary>Remove all subscriptions.</summary>

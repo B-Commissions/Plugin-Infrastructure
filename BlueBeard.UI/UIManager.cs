@@ -246,7 +246,9 @@ public class UIManager : IManager
 
     /// <summary>
     /// Push an update to every online player who currently has a UI of type
-    /// <typeparamref name="TUI"/> open.
+    /// <typeparamref name="TUI"/> open. Must be called from the main thread
+    /// (iterates Provider.clients and sends effects) — marshal via ThreadHelper
+    /// when updating from async work.
     /// </summary>
     public void PushUpdateAll<TUI>(string key, object value) where TUI : IUI
     {
@@ -262,7 +264,8 @@ public class UIManager : IManager
 
     /// <summary>
     /// Push an update to every online player whose current screen is of type
-    /// <typeparamref name="TScreen"/>.
+    /// <typeparamref name="TScreen"/>. Must be called from the main thread — marshal
+    /// via ThreadHelper when updating from async work.
     /// </summary>
     public void PushUpdateToScreen<TScreen>(string key, object value) where TScreen : IUIScreen
     {

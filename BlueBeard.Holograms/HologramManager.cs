@@ -33,6 +33,13 @@ public class HologramManager : IManager
     public event Action<Player, HologramDefinition> PlayerEnteredHologram;
     public event Action<Player, HologramDefinition> PlayerExitedHologram;
 
+    /// <summary>
+    /// Fired when a player enters a hologram zone but every pool slot is taken — the
+    /// player sees nothing. Lets consumers react (grow the pool, alert) instead of
+    /// only a log line.
+    /// </summary>
+    public event Action<Player, HologramDefinition> PoolExhausted;
+
     public IEnumerable<HologramDefinition> GetRegisteredDefinitions() => _registrations.Keys;
 
     public IEnumerable<(Player Player, HologramDefinition Definition)> GetPlayerAssignments()
@@ -176,7 +183,12 @@ public class HologramManager : IManager
         var index = -1;
         for (var i = 0; i < registration.Pool.Count; i++)
         { if (!usedIndices.Contains(i)) { index = i; break; } }
-        if (index < 0) { Logger.LogWarning($"[HologramManager] Pool exhausted for zone at {definition.Position}"); return; }
+        if (index < 0)
+        {
+            Logger.LogWarning($"[HologramManager] Pool exhausted for zone at {definition.Position}");
+            PoolExhausted?.Invoke(player, definition);
+            return;
+        }
         var hologram = registration.Pool[index];
         var playerMetadata = definition.Metadata != null
             ? new Dictionary<string, string>(definition.Metadata) : new Dictionary<string, string>();
