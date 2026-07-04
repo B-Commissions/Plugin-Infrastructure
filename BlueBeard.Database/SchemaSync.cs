@@ -46,7 +46,11 @@ public static class SchemaSync
         {
             var fk = col.ForeignKey;
             var refMeta = TableMetadata.For(fk.ReferencedType);
+            // Name path first (unobfuscated); fall back to the referenced table's primary key,
+            // since [ForeignKey] references are documented as "typically the primary key" and the
+            // property-name string does not survive obfuscation while the PK column is durable.
             var refCol = refMeta.GetColumnByPropertyName(fk.ReferencedProperty)
+                ?? refMeta.PrimaryKey
                 ?? throw new InvalidOperationException(
                     $"Foreign key on {metadata.TableName}.{col.ColumnName} references " +
                     $"{fk.ReferencedType.Name}.{fk.ReferencedProperty}, which is not a mapped column.");

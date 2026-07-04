@@ -176,7 +176,8 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
                 $"[HasMany] on {_metadata.ClrType.Name}.{nav.PropertyInfo.Name} requires the parent type to have a [PrimaryKey].");
 
         var relatedMeta = TableMetadata.For(nav.ElementType);
-        var fkCol = relatedMeta.GetColumnByPropertyName(nav.ForeignKeyProperty)
+        var fkCol = relatedMeta.GetColumnByPropertyName(nav.ForeignKeyProperty)   // name path (unobfuscated / no-FK-attr)
+            ?? relatedMeta.GetForeignKeyColumnTo(_metadata.ClrType)               // durable fallback via [ForeignKey] type token
             ?? throw new InvalidOperationException(
                 $"[HasMany] on {_metadata.ClrType.Name}.{nav.PropertyInfo.Name} references " +
                 $"property '{nav.ForeignKeyProperty}' on {nav.ElementType.Name}, which is not a mapped column.");
@@ -225,7 +226,8 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
 
     private async Task PopulateBelongsToAsync(List<object> children, NavigationInfo nav, MySqlConnection conn)
     {
-        var localKeyCol = _metadata.GetColumnByPropertyName(nav.LocalKeyProperty)
+        var localKeyCol = _metadata.GetColumnByPropertyName(nav.LocalKeyProperty)   // name path (unobfuscated / no-FK-attr)
+            ?? _metadata.GetForeignKeyColumnTo(nav.ElementType)                     // durable fallback via [ForeignKey] type token
             ?? throw new InvalidOperationException(
                 $"[BelongsTo] on {_metadata.ClrType.Name}.{nav.PropertyInfo.Name} references " +
                 $"local property '{nav.LocalKeyProperty}', which is not a mapped column.");

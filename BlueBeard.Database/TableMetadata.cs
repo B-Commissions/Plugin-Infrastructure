@@ -127,6 +127,22 @@ public class TableMetadata
         return Columns.FirstOrDefault(c => c.PropertyName == propertyName);
     }
 
+    // Durable under obfuscation: locate the column that is a [ForeignKey] pointing at
+    // the given referenced entity type. Type tokens survive renaming; property-name
+    // strings do not. Returns null on no match OR ambiguity (>1 FK to the same type),
+    // so callers fall through to their existing name-based error.
+    public ColumnInfo GetForeignKeyColumnTo(Type referencedType)
+    {
+        ColumnInfo found = null;
+        foreach (var c in Columns)
+        {
+            if (c.ForeignKey == null || c.ForeignKey.ReferencedType != referencedType) continue;
+            if (found != null) return null; // ambiguous — refuse to guess
+            found = c;
+        }
+        return found;
+    }
+
     private static Type TryGetCollectionElementType(Type t)
     {
         if (!t.IsGenericType) return null;
