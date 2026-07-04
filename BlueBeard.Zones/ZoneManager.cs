@@ -22,6 +22,13 @@ public class ZoneManager : IManager
     public event Action<Player, ZoneDefinition> PlayerEnteredZone;
     public event Action<Player, ZoneDefinition> PlayerExitedZone;
 
+    /// <summary>
+    /// Fired when a zone is removed via <see cref="DestroyZone"/> (or replaced by
+    /// <see cref="CreateZone"/>). Lets trackers/handlers release per-zone state — Unity
+    /// does not fire OnTriggerExit for a destroyed collider's occupants.
+    /// </summary>
+    public event Action<ZoneDefinition> ZoneDestroyed;
+
     public void Initialize(IZoneRepository repository)
     {
         _repository = repository;
@@ -89,7 +96,10 @@ public class ZoneManager : IManager
         if (!_zones.TryGetValue(id, out var go)) return;
         if (go != null) UnityEngine.Object.Destroy(go);
         _zones.Remove(id);
+        _definitions.TryGetValue(id, out var definition);
         _definitions.Remove(id);
+        if (definition != null)
+            ZoneDestroyed?.Invoke(definition);
     }
 
     public async Task CreateAndSaveZoneAsync(ZoneDefinition definition)

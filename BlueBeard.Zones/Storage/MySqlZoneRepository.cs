@@ -76,8 +76,8 @@ public class MySqlZoneRepository : IZoneRepository
             ShapeData = entity.ShapeData,
             FlagsJson = entity.FlagsJson,
             MetadataJson = entity.MetadataJson,
-            LowerHeight = entity.LowerHeight == 0 ? null : entity.LowerHeight,
-            UpperHeight = entity.UpperHeight == 0 ? null : entity.UpperHeight,
+            LowerHeight = entity.LowerHeight,
+            UpperHeight = entity.UpperHeight,
             Priority = entity.Priority
         };
         return ZoneStorageMapper.ToDefinition(storageData);
@@ -96,8 +96,8 @@ public class MySqlZoneRepository : IZoneRepository
             ShapeData = data.ShapeData,
             FlagsJson = data.FlagsJson,
             MetadataJson = data.MetadataJson,
-            LowerHeight = data.LowerHeight ?? 0,
-            UpperHeight = data.UpperHeight ?? 0,
+            LowerHeight = data.LowerHeight,
+            UpperHeight = data.UpperHeight,
             Priority = data.Priority
         };
     }

@@ -10,14 +10,15 @@ public class GroupFlagHandler(ZoneManager zoneManager, PlayerTracker playerTrack
 
     public override void Subscribe()
     {
-        ZoneManager.PlayerEnteredZone += OnPlayerEntered;
-        ZoneManager.PlayerExitedZone += OnPlayerExited;
+        // Tracker events are height/shape-filtered; raw ZoneManager events are not.
+        PlayerTracker.PlayerEnteredZone += OnPlayerEntered;
+        PlayerTracker.PlayerExitedZone += OnPlayerExited;
     }
 
     public override void Unsubscribe()
     {
-        ZoneManager.PlayerEnteredZone -= OnPlayerEntered;
-        ZoneManager.PlayerExitedZone -= OnPlayerExited;
+        PlayerTracker.PlayerEnteredZone -= OnPlayerEntered;
+        PlayerTracker.PlayerExitedZone -= OnPlayerExited;
     }
 
     private void OnPlayerEntered(Player player, ZoneDefinition definition)

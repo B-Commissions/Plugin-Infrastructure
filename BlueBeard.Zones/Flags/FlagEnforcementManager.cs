@@ -20,23 +20,33 @@ public class FlagEnforcementManager : IManager
     public void Initialize(ZoneManager zoneManager, PlayerTracker playerTracker, BlockListManager blockListManager)
     {
         _registry.RegisterBuiltInHandler(new DamageFlagHandler(zoneManager, playerTracker),
-            "Blocks damage in the zone (see noPlayerDamage / noVehicleDamage / noTireDamage / noAnimalDamage / noZombieDamage / noPvP variants).");
+            "Blocks damage in the zone.",
+            ZoneFlag.NoDamage, ZoneFlag.NoPlayerDamage, ZoneFlag.NoVehicleDamage,
+            ZoneFlag.NoTireDamage, ZoneFlag.NoAnimalDamage, ZoneFlag.NoZombieDamage, ZoneFlag.NoPvP);
         _registry.RegisterBuiltInHandler(new AccessFlagHandler(zoneManager, playerTracker),
-            "Restricts entering, leaving, or carjacking inside the zone (noEnter / noLeave / noVehicleCarjack).");
+            "Restricts entering, leaving, or carjacking inside the zone.",
+            ZoneFlag.NoEnter, ZoneFlag.NoLeave, ZoneFlag.NoVehicleCarjack);
         _registry.RegisterBuiltInHandler(new BuildFlagHandler(zoneManager, playerTracker, blockListManager),
-            "Blocks building in the zone; flag value may name a block list.");
+            "Blocks building in the zone; flag value may name a block list.",
+            ZoneFlag.NoBuild);
         _registry.RegisterBuiltInHandler(new ItemEquipFlagHandler(zoneManager, playerTracker, blockListManager),
-            "Dequips items on entry; flag value may name a block list.");
+            "Dequips blocked items in the zone; flag value may name a block list.",
+            ZoneFlag.NoItemEquip);
         _registry.RegisterBuiltInHandler(new LockpickFlagHandler(zoneManager, playerTracker),
-            "Blocks vehicle lockpicking inside the zone.");
+            "Blocks vehicle lockpicking inside the zone.",
+            ZoneFlag.NoLockpick);
         _registry.RegisterBuiltInHandler(new EnvironmentFlagHandler(zoneManager, playerTracker),
-            "Environmental flags: noZombie, noVehicleSiphoning, infiniteGenerator.");
+            "Environmental controls inside the zone.",
+            ZoneFlag.NoZombie, ZoneFlag.NoVehicleSiphoning, ZoneFlag.InfiniteGenerator);
         _registry.RegisterBuiltInHandler(new NotificationFlagHandler(zoneManager, playerTracker),
-            "Sends a chat message on enter/leave (enterMessage / leaveMessage).");
+            "Sends a chat message on enter/leave.",
+            ZoneFlag.EnterMessage, ZoneFlag.LeaveMessage);
         _registry.RegisterBuiltInHandler(new EffectFlagHandler(zoneManager, playerTracker),
-            "Plays Unturned effects on enter/leave (enterAddEffect / leaveAddEffect / enterRemoveEffect / leaveRemoveEffect).");
+            "Plays Unturned effects on enter/leave.",
+            ZoneFlag.EnterAddEffect, ZoneFlag.LeaveAddEffect, ZoneFlag.EnterRemoveEffect, ZoneFlag.LeaveRemoveEffect);
         _registry.RegisterBuiltInHandler(new GroupFlagHandler(zoneManager, playerTracker),
-            "Adds or removes Rocket permission groups on enter/leave.");
+            "Adds or removes Rocket permission groups on enter/leave.",
+            ZoneFlag.EnterAddGroup, ZoneFlag.EnterRemoveGroup, ZoneFlag.LeaveAddGroup, ZoneFlag.LeaveRemoveGroup);
     }
 
     public void Load()

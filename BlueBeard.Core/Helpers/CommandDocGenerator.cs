@@ -10,9 +10,6 @@ namespace BlueBeard.Core.Helpers;
 
 public static class CommandDocGenerator
 {
-    private static readonly FieldInfo ChildrenField =
-        typeof(SubCommandGroup).GetField("_children", BindingFlags.NonPublic | BindingFlags.Instance);
-
     public static void Generate(string pluginDirectory)
     {
         var dir = Path.Combine(pluginDirectory, "Commands");
@@ -73,9 +70,9 @@ public static class CommandDocGenerator
             sb.AppendLine($"**Permission:** `{group.Permission}`");
             sb.AppendLine();
 
-            var groupChildren = (SubCommand[])ChildrenField?.GetValue(group);
-            if (groupChildren != null && groupChildren.Length > 0)
-                AppendChildren(sb, groupChildren, headingLevel + 1);
+            var groupChildren = group.Children;
+            if (groupChildren.Count > 0)
+                AppendChildren(sb, groupChildren.ToArray(), headingLevel + 1);
         }
     }
 

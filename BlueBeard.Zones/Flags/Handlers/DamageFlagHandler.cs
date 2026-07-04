@@ -95,26 +95,37 @@ public class DamageFlagHandler(ZoneManager zoneManager, PlayerTracker playerTrac
     {
         if (!shouldAllow) return;
 
-        if (IsPositionInZoneWithFlag(vehicle.transform.position, ZoneFlag.NoDamage, out var zone, out _) ||
-            IsPositionInZoneWithFlag(vehicle.transform.position, ZoneFlag.NoVehicleDamage, out zone, out _))
-        {
-            var player = PlayerTool.getPlayer(instigatorSteamID);
-            if (player != null && HasOverridePermission(player, ZoneFlag.NoVehicleDamage, zone.Id)) return;
-            shouldAllow = false;
-        }
+        // Check the override against whichever flag actually matched — short-circuiting
+        // with a shared `out zone` used to test the NoVehicleDamage override against the
+        // NoDamage zone.
+        string matchedFlag = null;
+        ZoneDefinition zone;
+        if (IsPositionInZoneWithFlag(vehicle.transform.position, ZoneFlag.NoDamage, out zone, out _))
+            matchedFlag = ZoneFlag.NoDamage;
+        else if (IsPositionInZoneWithFlag(vehicle.transform.position, ZoneFlag.NoVehicleDamage, out zone, out _))
+            matchedFlag = ZoneFlag.NoVehicleDamage;
+        if (matchedFlag == null) return;
+
+        var player = PlayerTool.getPlayer(instigatorSteamID);
+        if (player != null && HasOverridePermission(player, matchedFlag, zone.Id)) return;
+        shouldAllow = false;
     }
 
     private void OnDamageTire(CSteamID instigatorSteamID, InteractableVehicle vehicle, int tireIndex, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
         if (!shouldAllow) return;
 
-        if (IsPositionInZoneWithFlag(vehicle.transform.position, ZoneFlag.NoDamage, out var zone, out _) ||
-            IsPositionInZoneWithFlag(vehicle.transform.position, ZoneFlag.NoTireDamage, out zone, out _))
-        {
-            var player = PlayerTool.getPlayer(instigatorSteamID);
-            if (player != null && HasOverridePermission(player, ZoneFlag.NoTireDamage, zone.Id)) return;
-            shouldAllow = false;
-        }
+        string matchedFlag = null;
+        ZoneDefinition zone;
+        if (IsPositionInZoneWithFlag(vehicle.transform.position, ZoneFlag.NoDamage, out zone, out _))
+            matchedFlag = ZoneFlag.NoDamage;
+        else if (IsPositionInZoneWithFlag(vehicle.transform.position, ZoneFlag.NoTireDamage, out zone, out _))
+            matchedFlag = ZoneFlag.NoTireDamage;
+        if (matchedFlag == null) return;
+
+        var player = PlayerTool.getPlayer(instigatorSteamID);
+        if (player != null && HasOverridePermission(player, matchedFlag, zone.Id)) return;
+        shouldAllow = false;
     }
 
     private void OnDamageAnimal(ref DamageAnimalParameters parameters, ref bool shouldAllow)

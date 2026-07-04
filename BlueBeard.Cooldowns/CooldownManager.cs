@@ -23,6 +23,9 @@ public class CooldownManager(Func<DateTime> utcNow) : IManager
 
     public CooldownManager() : this(null) { }
 
+    /// <summary>The injected clock, so derived classes (persistence) stay testable with a fake time source.</summary>
+    protected DateTime UtcNow => _utcNow();
+
     /// <summary>Start or overwrite a cooldown lasting <paramref name="durationSeconds"/>.</summary>
     public virtual void Start(string key, float durationSeconds)
     {

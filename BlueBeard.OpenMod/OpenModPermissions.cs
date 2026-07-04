@@ -9,10 +9,14 @@ using Steamworks;
 namespace BlueBeard.OpenMod;
 
 /// <summary>
-/// <see cref="IPermissions"/> adapter for OpenMod. Wraps OpenMod's async
-/// <see cref="IPermissionChecker"/> and <see cref="IPermissionRoleStore"/> with synchronous
-/// calls — safe on the Unturned main thread because permission checks are typically backed
-/// by in-memory or fast-storage providers.
+/// <see cref="IPermissions"/> adapter for OpenMod. The IPermissions contract is synchronous,
+/// so this blocks on OpenMod's async <see cref="IPermissionChecker"/> /
+/// <see cref="IPermissionRoleStore"/> (sync-over-async). That stalls the calling thread for
+/// the provider's I/O and can starve the thread pool under load — prefer the async surface
+/// (BlueBeardHost.PermissionsAsync) in new code; these sync methods exist for source
+/// compatibility with RocketMod-first consumers.
+///
+/// Online players only: checks resolve the actor through the connected-user directory.
 /// </summary>
 public sealed class OpenModPermissions : IPermissions
 {

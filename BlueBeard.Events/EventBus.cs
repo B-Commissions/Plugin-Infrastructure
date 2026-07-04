@@ -28,6 +28,7 @@ public interface IEventBus
 public class EventBus<TAction> : IEventBus where TAction : struct, Enum
 {
     private readonly List<Entry> _entries = [];
+    private readonly object _sync = new();
     private long _nextId;
 
     private struct Entry
@@ -46,12 +47,15 @@ public class EventBus<TAction> : IEventBus where TAction : struct, Enum
         if (handler == null) throw new ArgumentNullException(nameof(handler));
 
         var id = Interlocked.Increment(ref _nextId);
-        _entries.Add(new Entry
+        lock (_sync)
         {
-            Id = id,
-            Mask = Convert.ToInt64(mask),
-            Handler = handler,
-        });
+            _entries.Add(new Entry
+            {
+                Id = id,
+                Mask = Convert.ToInt64(mask),
+                Handler = handler,
+            });
+        }
         return new Subscription(id);
     }
 
@@ -59,12 +63,15 @@ public class EventBus<TAction> : IEventBus where TAction : struct, Enum
     public void Unsubscribe(Subscription subscription)
     {
         if (subscription == null) return;
-        for (var i = _entries.Count - 1; i >= 0; i--)
+        lock (_sync)
         {
-            if (_entries[i].Id == subscription.Id)
+            for (var i = _entries.Count - 1; i >= 0; i--)
             {
-                _entries.RemoveAt(i);
-                return;
+                if (_entries[i].Id == subscription.Id)
+                {
+                    _entries.RemoveAt(i);
+                    return;
+                }
             }
         }
     }
@@ -81,8 +88,14 @@ public class EventBus<TAction> : IEventBus where TAction : struct, Enum
         context.Action = action;
         var actionBits = Convert.ToInt64(action);
 
-        // Snapshot to allow subscribers to modify the list during dispatch.
-        var snapshot = _entries.ToArray();
+        // Snapshot (under the lock) so subscribers modifying the list during dispatch —
+        // or from another thread — never invalidate the enumeration. Handlers run
+        // OUTSIDE the lock so reentrant Subscribe/Unsubscribe stays deadlock-free.
+        Entry[] snapshot;
+        lock (_sync)
+        {
+            snapshot = _entries.ToArray();
+        }
         foreach (var entry in snapshot)
         {
             if ((entry.Mask & actionBits) != 0)
@@ -93,9 +106,15 @@ public class EventBus<TAction> : IEventBus where TAction : struct, Enum
     /// <summary>Remove all subscriptions.</summary>
     public void Clear()
     {
-        _entries.Clear();
+        lock (_sync)
+        {
+            _entries.Clear();
+        }
     }
 
     /// <summary>Current number of registered subscribers (diagnostics / testing).</summary>
-    public int SubscriberCount => _entries.Count;
+    public int SubscriberCount
+    {
+        get { lock (_sync) return _entries.Count; }
+    }
 }

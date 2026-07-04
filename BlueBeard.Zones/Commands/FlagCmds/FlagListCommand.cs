@@ -22,9 +22,14 @@ internal class FlagListCommand : SubCommand
             CommandBase.Reply(caller, "Available flags:", Color.cyan);
             foreach (var info in registry.Flags.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
             {
+                // Handler registrations are group labels; the settable flag keys are in
+                // HandledFlags — advertise those, not the group name.
+                var name = info.HandledFlags.Count > 0
+                    ? string.Join(", ", info.HandledFlags)
+                    : info.Name;
                 var line = string.IsNullOrEmpty(info.Description)
-                    ? $"  {info.Name}"
-                    : $"  {info.Name} - {info.Description}";
+                    ? $"  {name}"
+                    : $"  {name} - {info.Description}";
                 CommandBase.Reply(caller, line, Color.white);
             }
             return Task.CompletedTask;

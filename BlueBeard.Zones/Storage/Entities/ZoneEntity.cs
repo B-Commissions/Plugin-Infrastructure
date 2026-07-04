@@ -33,13 +33,15 @@ public class ZoneEntity
     [ColumnType("TEXT")]
     public string MetadataJson { get; set; }
 
+    // Nullable so a legitimate 0 offset survives the round-trip — the old non-nullable
+    // fields used 0 as the "unset" sentinel, silently erasing a real 0 bound.
     [Column("lower_height")]
     [ColumnType("FLOAT NULL")]
-    public float LowerHeight { get; set; }
+    public float? LowerHeight { get; set; }
 
     [Column("upper_height")]
     [ColumnType("FLOAT NULL")]
-    public float UpperHeight { get; set; }
+    public float? UpperHeight { get; set; }
 
     [Column("priority")]
     public int Priority { get; set; }

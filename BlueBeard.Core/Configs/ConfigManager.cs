@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,7 +13,10 @@ namespace BlueBeard.Core.Configs;
 
 public class ConfigManager : IManager
 {
-    private readonly Dictionary<Type, object> _configs = new();
+    // Concurrent: GetConfig<T> is called from background threads (e.g. DB work marshalled
+    // via ThreadHelper) while ReloadConfig can swap entries on the main thread — and a
+    // cache miss in GetConfig<T> mutates the dictionary.
+    private readonly ConcurrentDictionary<Type, object> _configs = new();
     private string _directory;
 
     public void Initialize(string pluginDirectory)
@@ -69,7 +73,14 @@ public class ConfigManager : IManager
                 return config;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Falling back to defaults will overwrite the file on the next save — the
+            // user deserves to know why their edits vanished.
+            Logger.LogWarning(
+                $"[ConfigManager] Failed to read {Path.GetFileName(path)} — using defaults. " +
+                $"Fix the file to keep your changes. Error: {ex.Message}");
+        }
 
         var fallbackConfig = new T();
         fallbackConfig.LoadDefaults();

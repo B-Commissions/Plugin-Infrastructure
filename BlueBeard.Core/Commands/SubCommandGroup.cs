@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Rocket.API;
@@ -14,6 +15,9 @@ public class SubCommandGroup(string name, string[] aliases, string permission, S
     public override string Permission => permission;
     public override string Help => $"Manage {name}s";
     public override string Syntax => string.Join(" | ", children.Select(c => c.Name));
+
+    /// <summary>The group's subcommands, in registration order.</summary>
+    public IReadOnlyList<SubCommand> Children => children;
 
     public override async Task Execute(IRocketPlayer caller, string[] args)
     {

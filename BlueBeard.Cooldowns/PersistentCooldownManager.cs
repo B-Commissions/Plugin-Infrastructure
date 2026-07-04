@@ -92,14 +92,19 @@ public class PersistentCooldownManager : CooldownManager
 
         ThreadHelper.RunAsynchronously(async () =>
         {
-            var now = DateTime.UtcNow;
-            var rows = await _db.Table<BBCooldownRow>().Where(r => r.Expiry > now);
+            var table = _db.Table<BBCooldownRow>();
+            var now = UtcNow;
+
+            // Expired rows were previously never removed, growing bb_cooldowns forever.
+            await table.DeleteAsync(r => r.Expiry <= now);
+
+            var rows = await table.Where(r => r.Expiry > now);
             ThreadHelper.RunSynchronously(() =>
             {
                 foreach (var row in rows)
                 {
                     // Use base.Start so we don't re-persist rows we just loaded.
-                    var remaining = row.Expiry - DateTime.UtcNow;
+                    var remaining = row.Expiry - UtcNow;
                     if (remaining > TimeSpan.Zero)
                         base.Start(row.Key, remaining);
                 }
@@ -118,14 +123,16 @@ public class PersistentCooldownManager : CooldownManager
         if (_db == null) return;
         var remainingSeconds = GetRemaining(key);
         if (remainingSeconds <= 0f) return;
-        var expiry = DateTime.UtcNow.AddSeconds(remainingSeconds);
+        var expiry = UtcNow.AddSeconds(remainingSeconds);
 
         ThreadHelper.RunAsynchronously(async () =>
         {
-            var table = _db.Table<BBCooldownRow>();
-            // Overwrite: delete then insert. A proper upsert requires raw SQL which DbSet doesn't expose.
-            await table.DeleteAsync(r => r.Key == key);
-            await table.InsertAsync(new BBCooldownRow { Key = key, Expiry = expiry });
+            // Atomic upsert — the old delete-then-insert pair could interleave between two
+            // rapid Start() calls for the same key (PK collision or lost row).
+            await _db.Table<BBCooldownRow>().ExecuteSqlAsync(
+                "INSERT INTO `bb_cooldowns` (`cooldown_key`, `expiry`) VALUES (@key, @expiry) " +
+                "ON DUPLICATE KEY UPDATE `expiry` = @expiry;",
+                ("@key", key), ("@expiry", expiry));
         }, "[Cooldowns] Failed to persist cooldown row.");
     }
 }

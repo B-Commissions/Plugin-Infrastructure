@@ -38,13 +38,28 @@ public sealed class OpenModPlayerEvents : IPlayerEvents, IDisposable
 
     private Task OnConnected(IServiceProvider _, object sender, UnturnedUserConnectedEvent evt)
     {
-        PlayerConnected?.Invoke(OpenModPlayer.From(evt.User));
+        Dispatch(PlayerConnected, OpenModPlayer.From(evt.User));
         return Task.CompletedTask;
     }
 
     private Task OnDisconnected(IServiceProvider _, object sender, UnturnedUserDisconnectedEvent evt)
     {
-        PlayerDisconnected?.Invoke(OpenModPlayer.From(evt.User));
+        Dispatch(PlayerDisconnected, OpenModPlayer.From(evt.User));
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// OpenMod's event bus may invoke handlers on any thread; the Rocket adapter fires
+    /// IPlayerEvents on the Unturned main thread, and consumers rely on that contract —
+    /// marshal to match.
+    /// </summary>
+    private static void Dispatch(Action<IPlayer> handler, IPlayer player)
+    {
+        if (handler == null) return;
+        var dispatcher = BlueBeardHost.Dispatcher;
+        if (dispatcher != null)
+            dispatcher.QueueOnMainThread(() => handler(player));
+        else
+            handler(player);
     }
 }

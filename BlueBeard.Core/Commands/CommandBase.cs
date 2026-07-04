@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BlueBeard.Core.Helpers;
 using Rocket.API;
 using Rocket.Unturned.Chat;
 using Rocket.Unturned.Player;
+using SDG.Unturned;
 using UnityEngine;
 using Logger = Rocket.Core.Logging.Logger;
 
@@ -61,14 +63,33 @@ public abstract class CommandBase : IRocketCommand
         }
     }
 
+    /// <summary>
+    /// Send a reply to the caller. Safe from any thread: continuations after an <c>await</c>
+    /// in a subcommand resume on the thread pool (Unturned installs no
+    /// SynchronizationContext), and UnturnedChat.Say is main-thread-only — off-thread calls
+    /// are marshalled back automatically.
+    /// </summary>
     public static void Reply(IRocketPlayer caller, string message, Color color = default)
     {
         if (color == default)
             color = Color.white;
 
         if (caller is UnturnedPlayer player)
-            UnturnedChat.Say(player, message, color);
+        {
+            if (IsGameThread())
+                UnturnedChat.Say(player, message, color);
+            else
+                ThreadHelper.RunSynchronously(() => UnturnedChat.Say(player, message, color));
+        }
         else
+        {
             Logger.Log(message);
+        }
+    }
+
+    private static bool IsGameThread()
+    {
+        try { ThreadUtil.assertIsGameThread(); return true; }
+        catch { return false; }
     }
 }

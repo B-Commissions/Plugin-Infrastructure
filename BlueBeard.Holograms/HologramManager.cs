@@ -62,6 +62,14 @@ public class HologramManager : IManager
             if (ReferenceEquals(kvp.Value.Display, display) && ReferenceEquals(kvp.Value.Pool, pool))
             { state = kvp.Value; break; }
         }
+        if (state != null && (state.IsGlobal != isGlobal || !ReferenceEquals(state.PlayerFilter, playerFilter)))
+        {
+            // A shared Display+Pool means shared allocation state; differing settings on a
+            // later registration are silently ignored — say so instead of surprising the caller.
+            Logger.LogWarning(
+                $"[Holograms] Definition at {definition.Position} reuses an existing Display+Pool registration; " +
+                "its isGlobal/playerFilter arguments are ignored in favour of the original registration's.");
+        }
         if (state == null)
         {
             state = new RegistrationState
