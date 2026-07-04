@@ -19,7 +19,6 @@ env:
     BlueBeard.Events
     BlueBeard.Holograms
     BlueBeard.Items
-    BlueBeard.MiniGames
     BlueBeard.OpenMod
     BlueBeard.RocketMod
     BlueBeard.SnapLogic

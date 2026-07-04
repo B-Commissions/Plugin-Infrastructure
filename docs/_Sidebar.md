@@ -61,13 +61,6 @@
 - [Behaviour Registry](Items-Behaviour-Registry) — items, barricades, structures, vehicles, zombies, animals
 - [Examples](Items-Examples)
 
-### MiniGames
-- [Overview](MiniGames-Home)
-- [Getting Started](MiniGames-Getting-Started)
-- [Definitions and Handlers](MiniGames-Definitions-and-Handlers)
-- [Lifecycle](MiniGames-Lifecycle)
-- [Examples](MiniGames-Examples)
-
 ### SnapLogic
 - [Overview](SnapLogic-Home)
 - [Getting Started](SnapLogic-Getting-Started)

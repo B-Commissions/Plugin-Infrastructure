@@ -23,8 +23,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueBeard.Cooldowns", "Blue
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueBeard.Items", "BlueBeard.Items\BlueBeard.Items.csproj", "{A100000C-0000-0000-0000-00000000000C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueBeard.MiniGames", "BlueBeard.MiniGames\BlueBeard.MiniGames.csproj", "{A100000D-0000-0000-0000-00000000000D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueBeard.Tests", "BlueBeard.Tests\BlueBeard.Tests.csproj", "{A100000E-0000-0000-0000-00000000000E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueBeard.RocketMod", "BlueBeard.RocketMod\BlueBeard.RocketMod.csproj", "{E023B779-33F5-432A-A98E-A069FCA3937D}"
@@ -161,18 +159,6 @@ Global
 		{A100000C-0000-0000-0000-00000000000C}.Release|x64.Build.0 = Release|Any CPU
 		{A100000C-0000-0000-0000-00000000000C}.Release|x86.ActiveCfg = Release|Any CPU
 		{A100000C-0000-0000-0000-00000000000C}.Release|x86.Build.0 = Release|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Debug|x64.Build.0 = Debug|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Debug|x86.Build.0 = Debug|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Release|x64.ActiveCfg = Release|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Release|x64.Build.0 = Release|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Release|x86.ActiveCfg = Release|Any CPU
-		{A100000D-0000-0000-0000-00000000000D}.Release|x86.Build.0 = Release|Any CPU
 		{A100000E-0000-0000-0000-00000000000E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A100000E-0000-0000-0000-00000000000E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A100000E-0000-0000-0000-00000000000E}.Debug|x64.ActiveCfg = Debug|Any CPU

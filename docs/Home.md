@@ -68,13 +68,6 @@ State encoding and per-asset behaviour registries for **items, barricades, struc
 - [Behaviour Registry](Items/Behaviour-Registry.md) -- All six managers, what's auto-dispatched vs manual
 - [Examples](Items/Examples.md) -- Storage crate, locked medkit, ownership-veto pickups, VIP vehicle, salvage protection, tanky animal
 
-### [MiniGames](MiniGames/Home.md)
-Framework for timed, interactive mini-games layered over Unturned's effect system. Handles the full lifecycle (start → tick → input → end) so implementations only define the game logic.
-- [Getting Started](MiniGames/Getting-Started.md) -- Setup, writing a handler
-- [Definitions and Handlers](MiniGames/Definitions-and-Handlers.md) -- MiniGameDefinition, IMiniGameHandler reference
-- [Lifecycle](MiniGames/Lifecycle.md) -- State transitions, UI precedence, completion ordering
-- [Examples](MiniGames/Examples.md) -- Hotwire, reaction test, colour-match
-
 ### [SnapLogic](SnapLogic/Home.md)
 Snap-point system for attaching barricades to defined positions on host barricades.
 - [Getting Started](SnapLogic/Getting-Started.md) -- Setup and core concepts
