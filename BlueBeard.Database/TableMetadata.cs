@@ -19,6 +19,39 @@ public class ColumnInfo
     public PropertyInfo PropertyInfo { get; set; }
     public IValueConverter Converter { get; set; }
     public ForeignKeyAttribute ForeignKey { get; set; }
+
+    /// <summary>
+    /// Resolved nullability: explicit attribute wins, then PK/AutoIncrement force NOT NULL,
+    /// otherwise the historical default (nullable).
+    /// </summary>
+    public bool IsNullable { get; set; } = true;
+
+    /// <summary>
+    /// True only when the entity author declared nullability via [Required] or
+    /// [Column(Nullable = ...)]. Schema diffing only enforces nullability drift for
+    /// explicit declarations, so unannotated legacy schemas are never churned.
+    /// </summary>
+    public bool HasExplicitNullability { get; set; }
+
+    /// <summary>Single-column UNIQUE constraint via [Unique].</summary>
+    public bool IsUnique { get; set; }
+
+    /// <summary>[MaxLength] sizing for string columns; null when unspecified.</summary>
+    public MaxLengthAttribute MaxLength { get; set; }
+
+    /// <summary>[DefaultValue] declaration; null when unspecified.</summary>
+    public DefaultValueAttribute Default { get; set; }
+}
+
+/// <summary>
+/// A secondary index derived from [Unique] and [Index] attributes. Matched against
+/// INFORMATION_SCHEMA.STATISTICS by name; missing indexes are created, never dropped.
+/// </summary>
+public class IndexInfo
+{
+    public string Name { get; set; }
+    public bool IsUnique { get; set; }
+    public List<ColumnInfo> Columns { get; set; }
 }
 
 public class TableMetadata
@@ -30,6 +63,7 @@ public class TableMetadata
     public List<ColumnInfo> Columns { get; }
     public ColumnInfo PrimaryKey { get; }
     public List<NavigationInfo> Navigations { get; }
+    public List<IndexInfo> Indexes { get; }
 
     private TableMetadata(Type clrType, string tableName, List<ColumnInfo> columns, List<NavigationInfo> navigations)
     {
@@ -38,6 +72,7 @@ public class TableMetadata
         Columns = columns;
         PrimaryKey = columns.FirstOrDefault(c => c.IsPrimaryKey);
         Navigations = navigations;
+        Indexes = BuildIndexes(tableName, columns);
     }
 
     public static TableMetadata For<T>() => For(typeof(T));
@@ -99,17 +134,32 @@ public class TableMetadata
                 else
                     ValueConverters.TryGet(prop.PropertyType, out converter);
 
+                var isPrimaryKey = prop.GetCustomAttribute<PrimaryKeyAttribute>() != null;
+                var isAutoIncrement = prop.GetCustomAttribute<AutoIncrementAttribute>() != null;
+
+                // Explicit declaration ([Required] / [Column(Nullable = ...)]) wins; [Required]
+                // beats a conflicting Nullable = true. PK/AutoIncrement are implicitly NOT NULL
+                // (MySQL enforces this anyway) but don't count as an explicit declaration.
+                var required = prop.GetCustomAttribute<RequiredAttribute>() != null;
+                var explicitNullable = required ? false : colAttr?.NullableExplicit;
+                var hasExplicit = required || colAttr?.NullableExplicit != null;
+
                 columns.Add(new ColumnInfo
                 {
                     PropertyName = prop.Name,
                     ColumnName = colName,
                     ClrType = prop.PropertyType,
-                    IsPrimaryKey = prop.GetCustomAttribute<PrimaryKeyAttribute>() != null,
-                    IsAutoIncrement = prop.GetCustomAttribute<AutoIncrementAttribute>() != null,
+                    IsPrimaryKey = isPrimaryKey,
+                    IsAutoIncrement = isAutoIncrement,
                     OverrideSqlType = colTypeAttr?.SqlType,
                     PropertyInfo = prop,
                     Converter = converter,
-                    ForeignKey = fkAttr
+                    ForeignKey = fkAttr,
+                    IsNullable = hasExplicit ? explicitNullable.Value : !(isPrimaryKey || isAutoIncrement),
+                    HasExplicitNullability = hasExplicit,
+                    IsUnique = prop.GetCustomAttribute<UniqueAttribute>() != null,
+                    MaxLength = prop.GetCustomAttribute<MaxLengthAttribute>(),
+                    Default = prop.GetCustomAttribute<DefaultValueAttribute>()
                 });
             }
 
@@ -141,6 +191,64 @@ public class TableMetadata
             found = c;
         }
         return found;
+    }
+
+    private static List<IndexInfo> BuildIndexes(string tableName, List<ColumnInfo> columns)
+    {
+        var indexes = new List<IndexInfo>();
+
+        // [Unique] — single-column unique index, deterministic name.
+        foreach (var col in columns.Where(c => c.IsUnique && !c.IsPrimaryKey))
+        {
+            indexes.Add(new IndexInfo
+            {
+                Name = $"ux_{tableName}_{col.ColumnName}",
+                IsUnique = true,
+                Columns = [col]
+            });
+        }
+
+        // [Index] — plain single-column, or composite when Group is shared.
+        var composites = new Dictionary<string, List<(ColumnInfo Col, IndexAttribute Attr, int DeclOrder)>>();
+        var declOrder = 0;
+        foreach (var col in columns)
+        {
+            foreach (var attr in col.PropertyInfo.GetCustomAttributes<IndexAttribute>())
+            {
+                if (string.IsNullOrEmpty(attr.Group))
+                {
+                    indexes.Add(new IndexInfo
+                    {
+                        Name = $"ix_{tableName}_{col.ColumnName}",
+                        IsUnique = attr.Unique,
+                        Columns = [col]
+                    });
+                }
+                else
+                {
+                    if (!composites.TryGetValue(attr.Group, out var members))
+                        composites[attr.Group] = members = [];
+                    members.Add((col, attr, declOrder));
+                }
+            }
+            declOrder++;
+        }
+
+        foreach (var kvp in composites)
+        {
+            var ordered = kvp.Value
+                .OrderBy(m => m.Attr.Order)
+                .ThenBy(m => m.DeclOrder)
+                .ToList();
+            indexes.Add(new IndexInfo
+            {
+                Name = $"ix_{tableName}_{kvp.Key}",
+                IsUnique = ordered.Any(m => m.Attr.Unique),
+                Columns = ordered.Select(m => m.Col).ToList()
+            });
+        }
+
+        return indexes;
     }
 
     private static Type TryGetCollectionElementType(Type t)

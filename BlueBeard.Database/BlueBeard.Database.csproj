@@ -11,6 +11,9 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="BlueBeard.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\BlueBeard.Core\BlueBeard.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
