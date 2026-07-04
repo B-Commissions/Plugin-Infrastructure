@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BlueBeard.Core;
 using BlueBeard.Core.Configs;
@@ -14,6 +15,7 @@ public class DatabaseManager : IManager
     private string _connectionString;
     private readonly ConcurrentDictionary<Type, object> _dbSets = new();
     private readonly List<(Type Type, MigrationMode Mode)> _entityTypes = [];
+    private readonly List<IMigration> _migrations = [];
     private DatabaseConfig _config;
 
     public void Initialize(ConfigManager configManager) =>
@@ -39,7 +41,41 @@ public class DatabaseManager : IManager
         _entityTypes.Add((typeof(T), migration));
     }
 
+    /// <summary>
+    /// Register a versioned run-once migration (renames, backfills, destructive changes —
+    /// anything additive schema sync can't express). Pending migrations run in ascending
+    /// version order during Load, after schema sync, tracked in __bluebeard_migrations.
+    /// </summary>
+    public void RegisterMigration(IMigration migration)
+    {
+        _migrations.Add(migration);
+    }
+
     public void Load()
+    {
+        BuildConnectionString();
+        SyncSchema();
+    }
+
+    /// <summary>
+    /// Fully async variant of <see cref="Load"/> for consumers that keep startup off the
+    /// main thread. The sync Load is unchanged and blocks until the schema exists.
+    /// </summary>
+    public async Task LoadAsync()
+    {
+        BuildConnectionString();
+        try
+        {
+            await SyncSchemaCoreAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException(ex, "[Database] Failed to sync schema.");
+            throw;
+        }
+    }
+
+    private void BuildConnectionString()
     {
         _connectionString = new MySqlConnectionStringBuilder
         {
@@ -49,8 +85,6 @@ public class DatabaseManager : IManager
             UserID = _config.Username,
             Password = _config.Password
         }.ConnectionString;
-
-        SyncSchema();
     }
 
     public void SyncSchema()
@@ -61,19 +95,7 @@ public class DatabaseManager : IManager
         // the RocketMod/Unity main thread.
         try
         {
-            Task.Run(async () =>
-            {
-                using var conn = CreateConnection();
-                await conn.OpenAsync();
-
-                foreach (var (type, mode) in _entityTypes)
-                {
-                    var metadata = TableMetadata.For(type);
-                    await Migrator.ApplyAsync(conn, metadata, mode);
-                }
-
-                Logger.Log("[Database] Schema sync complete.");
-            }).GetAwaiter().GetResult();
+            Task.Run(SyncSchemaCoreAsync).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
@@ -81,6 +103,62 @@ public class DatabaseManager : IManager
             // silently leave tables uncreated and surface later as "table doesn't exist".
             Logger.LogException(ex, "[Database] Failed to sync schema.");
             throw;
+        }
+    }
+
+    private async Task SyncSchemaCoreAsync()
+    {
+        using var conn = CreateConnection();
+        await conn.OpenAsync();
+
+        foreach (var (type, mode) in _entityTypes)
+        {
+            var metadata = TableMetadata.For(type);
+            await Migrator.ApplyAsync(conn, metadata, mode);
+        }
+
+        await RunMigrationsAsync(conn);
+
+        Logger.Log("[Database] Schema sync complete.");
+    }
+
+    private async Task RunMigrationsAsync(MySqlConnection conn)
+    {
+        if (_migrations.Count == 0) return;
+
+        using (var create = new MySqlCommand(
+            "CREATE TABLE IF NOT EXISTS `__bluebeard_migrations` (" +
+            "`version` INT PRIMARY KEY, `applied_at` DATETIME NOT NULL);", conn))
+        {
+            await create.ExecuteNonQueryAsync();
+        }
+
+        var applied = new HashSet<int>();
+        using (var select = new MySqlCommand("SELECT `version` FROM `__bluebeard_migrations`;", conn))
+        using (var reader = await select.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+                applied.Add(reader.GetInt32(0));
+        }
+
+        var duplicate = _migrations.GroupBy(m => m.Version).FirstOrDefault(g => g.Count() > 1);
+        if (duplicate != null)
+            throw new InvalidOperationException(
+                $"[Database] Two migrations registered with version {duplicate.Key}.");
+
+        foreach (var migration in _migrations.OrderBy(m => m.Version))
+        {
+            if (applied.Contains(migration.Version)) continue;
+
+            Logger.Log($"[Database] Applying migration v{migration.Version} ({migration.GetType().Name})...");
+            await migration.UpAsync(conn);
+
+            using var record = new MySqlCommand(
+                "INSERT INTO `__bluebeard_migrations` (`version`, `applied_at`) VALUES (@v, UTC_TIMESTAMP());", conn);
+            record.Parameters.AddWithValue("@v", migration.Version);
+            await record.ExecuteNonQueryAsync();
+
+            Logger.Log($"[Database] Migration v{migration.Version} applied.");
         }
     }
 

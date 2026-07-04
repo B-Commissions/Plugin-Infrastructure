@@ -204,7 +204,7 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
         await conn.OpenAsync();
         using var cmd = new MySqlCommand(sql, conn);
         AddParameters(cmd, parameters);
-        await cmd.ExecuteNonQueryAsync();
+        await ExecuteWriteAsync(cmd, null);
     }
 
     /// <summary>Bulk delete by predicate inside the given transaction. Hooks do not fire.</summary>
@@ -238,7 +238,7 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
             cmd.Parameters.AddWithValue($"@p{i}", EntityReader.ToParameter(col, col.PropertyInfo.GetValue(entity)));
         }
 
-        await cmd.ExecuteNonQueryAsync();
+        await ExecuteWriteAsync(cmd, tx);
 
         if (_metadata.PrimaryKey is { IsAutoIncrement: true } pk && cmd.LastInsertedId != 0)
             pk.PropertyInfo.SetValue(entity, Convert.ChangeType(cmd.LastInsertedId, pk.ClrType));
@@ -281,7 +281,7 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
                 }
             }
 
-            await cmd.ExecuteNonQueryAsync();
+            await ExecuteWriteAsync(cmd, tx);
 
             if (pk != null && cmd.LastInsertedId != 0)
             {
@@ -318,7 +318,7 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
         cmd.Parameters.AddWithValue($"@p{pkParamIndex}",
             EntityReader.ToParameter(_metadata.PrimaryKey, _metadata.PrimaryKey.PropertyInfo.GetValue(entity)));
 
-        await cmd.ExecuteNonQueryAsync();
+        await ExecuteWriteAsync(cmd, tx);
 
         await HookRunner.RunAsync(_metadata, HookKind.AfterUpdate, entity);
     }
@@ -337,7 +337,7 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
         cmd.Parameters.AddWithValue("@p0",
             EntityReader.ToParameter(_metadata.PrimaryKey, _metadata.PrimaryKey.PropertyInfo.GetValue(entity)));
 
-        await cmd.ExecuteNonQueryAsync();
+        await ExecuteWriteAsync(cmd, tx);
 
         await HookRunner.RunAsync(_metadata, HookKind.AfterDelete, entity);
     }
@@ -346,25 +346,40 @@ public class DbSet<T>(Func<MySqlConnection> connectionFactory)
     // Internals
     // -----------------------------------------------------------------------
 
-    private async Task<long> ScalarLongAsync(string sql, Action<MySqlCommand> bindParameters)
-    {
-        using var conn = connectionFactory();
-        await conn.OpenAsync();
-        using var cmd = new MySqlCommand(sql, conn);
-        bindParameters?.Invoke(cmd);
-        var result = await cmd.ExecuteScalarAsync();
-        return Convert.ToInt64(result);
-    }
+    private Task<long> ScalarLongAsync(string sql, Action<MySqlCommand> bindParameters) =>
+        DbRetry.RunAsync(async () =>
+        {
+            using var conn = connectionFactory();
+            await conn.OpenAsync();
+            using var cmd = new MySqlCommand(sql, conn);
+            bindParameters?.Invoke(cmd);
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt64(result);
+        });
 
     internal async Task<List<T>> QueryInternalAsync(string sql, Action<MySqlCommand> bindParameters, BbTransaction transaction = null)
     {
         if (transaction != null)
             return await QueryOnConnectionAsync(sql, bindParameters, transaction.Connection, transaction.Transaction);
 
-        using var conn = connectionFactory();
-        await conn.OpenAsync();
-        return await QueryOnConnectionAsync(sql, bindParameters, conn, null);
+        // Reads are side-effect free — retry the whole operation (fresh connection per
+        // attempt) on deadlock/lock-wait/transient connection failures.
+        return await DbRetry.RunAsync(async () =>
+        {
+            using var conn = connectionFactory();
+            await conn.OpenAsync();
+            return await QueryOnConnectionAsync(sql, bindParameters, conn, null);
+        });
     }
+
+    /// <summary>
+    /// Deadlock/lock-wait retry for single-statement autocommit writes: MySQL rolls the
+    /// failed statement back atomically, so re-executing is safe. Statements inside a
+    /// caller-owned transaction are never retried — the whole transaction was rolled back
+    /// and only the caller can restart it.
+    /// </summary>
+    private static Task<int> ExecuteWriteAsync(MySqlCommand cmd, MySqlTransaction tx) =>
+        tx != null ? cmd.ExecuteNonQueryAsync() : DbRetry.RunAsync(cmd.ExecuteNonQueryAsync);
 
     private async Task<List<T>> QueryOnConnectionAsync(string sql, Action<MySqlCommand> bindParameters, MySqlConnection conn, MySqlTransaction tx)
     {
