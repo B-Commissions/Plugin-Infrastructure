@@ -106,3 +106,30 @@ IPlayer console = OpenModPlayer.Console;
 ```
 
 The underlying `UnturnedUser` stays accessible via `((OpenModPlayer)wrapped).User`; the SDG `Player` (if any) via `wrapped.Unturned`.
+
+## Threading model
+
+`QueueOnMainThread` is safe from any thread: `OpenModBootstrap.Install()` pre-creates a
+runner GameObject on the main thread, and dispatch only enqueues into a thread-safe queue
+drained in `Update()` (delays use unscaled time computed on the main thread). Calling the
+dispatcher from a background thread before `Install()` throws — install first.
+`Uninstall()` destroys the runner so hot-reloads don't stack orphans.
+
+`IPlayerEvents` handlers are marshalled to the main thread, matching the RocketMod
+adapter's contract.
+
+## Async permissions
+
+The synchronous `IPermissions` shim blocks on OpenMod's async API (sync-over-async) and
+exists for source compatibility. Prefer `BlueBeardHost.PermissionsAsync` in async code —
+the OpenMod adapter installs a natively async implementation automatically. Both resolve
+**online players only** (via the connected-user directory).
+
+## Translations
+
+Bind your plugin's localizer once and use `BlueBeardHost.Translations` everywhere:
+
+```csharp
+OpenModBootstrap.Install(...);
+OpenModBootstrap.InstallTranslations(m_StringLocalizer);
+```

@@ -92,3 +92,12 @@ DB writes are fire-and-forget via `ThreadHelper.RunAsynchronously`, so the publi
 - **CancelByPrefix** iterates in-memory keys before clearing and deletes each matching DB row individually. `BlueBeard.Database`'s expression visitor does not support `StartsWith` or string `CompareTo`, so prefix queries can't be expressed as a single DELETE statement. For domains with thousands of cooldowns this can produce a lot of round trips; keep `CancelByPrefix` usage moderate.
 - **Upsert** is implemented as "DELETE then INSERT" because `BlueBeard.Database` doesn't expose a native upsert. For a high-frequency `Start` of the same key this means two round trips per write.
 - **Clock skew** between the server clock and the database clock affects the `Load` filter (`expiry > now`). The manager uses the process UTC clock, so if the DB is in a different timezone the rows still sort correctly but relative expiry may drift by the skew amount.
+
+## Persistence semantics
+
+- `Load()` purges expired rows (`expiry <= now`) before reading unexpired ones, so
+  `bb_cooldowns` no longer grows without bound.
+- Writes use an atomic `INSERT ... ON DUPLICATE KEY UPDATE` upsert — two rapid `Start`
+  calls for the same key can no longer race a delete/insert pair.
+- Persistence timestamps come from the same injectable clock as the in-memory manager,
+  so the persistent variant is testable with a fake time source.

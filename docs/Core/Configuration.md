@@ -179,3 +179,40 @@ After the first load, `{pluginDirectory}/Configs/BountyConfig.configuration.xml`
 ```
 
 Server operators can edit this file directly. On the next `LoadConfig` or `ReloadConfig`, any new properties are filled in from defaults, removed properties are cleaned up, and null reference-type properties are repaired.
+
+## Validation attributes
+
+`BlueBeard.Core.Validation` adds attribute-driven validation that works on **any** config
+class — BlueBeard `IConfig`, Rocket-native `IRocketPluginConfiguration`, or plain objects.
+
+```csharp
+public class MyConfig : IRocketPluginConfiguration
+{
+    [Range(1, 100)]                    public int MaxPlayers { get; set; }
+    [MinValue(0)]                      public double SpawnRate { get; set; }
+    [NotEmpty]                         public string WelcomeMessage { get; set; }
+    [RegexMatch("^#?[0-9a-fA-F]{6}$")] public string ChatColor { get; set; }
+    [OneOf("easy", "normal", "hard")]  public string Difficulty { get; set; }
+    [ValidateNested]                   public List<Reward> Rewards { get; set; }
+
+    public void LoadDefaults() { /* ... */ }
+}
+```
+
+- `ConfigValidator.Validate(instance)` returns errors with dotted paths
+  (`Rewards[2].Chance`), no mutation.
+- `ConfigValidator.ValidateAndCorrect(instance)` fixes in place: `[Range]`/`[MinValue]`/
+  `[MaxValue]` violations clamp to the nearest bound, everything else resets from a
+  defaults instance built via `new T()` + `LoadDefaults()` (when the type is an
+  `IRocketPluginConfiguration` or `IConfig`). Returns a `CorrectionReport`.
+
+For a Rocket-native config, call it in `Load()`:
+
+```csharp
+var report = ConfigValidator.ValidateAndCorrect(Configuration.Instance);
+foreach (var fix in report.Corrections) Logger.LogWarning($"[Config] {fix}");
+if (report.ChangedAnything) Configuration.Save();
+```
+
+`ConfigManager` runs `ValidateAndCorrect` automatically after deserialization and logs
+every correction. Configs without validation attributes behave exactly as before.

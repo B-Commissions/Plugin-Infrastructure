@@ -56,3 +56,10 @@ When a host is salvaged with `DestroyChildrenWithHost = true`:
 1. `OnItemUnsnapped` fires for each child attachment.
 2. Child barricades are destroyed.
 3. `OnHostDestroyed` fires for the host.
+
+## OnHostRemoved (with reason)
+
+`OnHostRemoved(SnapHost, HostRemovalReason)` fires alongside the legacy `OnHostDestroyed`
+and carries why the host left the registry: `Destroyed` (gunfire/explosion/decay — now
+detected by the watcher, honouring `DestroyChildrenWithHost`), `Salvaged`, or
+`Unregistered` (via `UnregisterDefinition`).

@@ -381,3 +381,81 @@ ThreadHelper.RunAsynchronously(async () =>
 ```
 
 The second parameter to `RunAsynchronously` is an optional exception message that is logged if the operation fails.
+## CountAsync / AnyAsync
+
+```csharp
+long total   = await db.Table<PlayerData>().CountAsync();
+long veterans = await db.Table<PlayerData>().CountAsync(p => p.Kills > 100);
+bool anyBans = await db.Table<BanRow>().AnyAsync(b => b.Active);
+```
+
+## Query() — composable queries
+
+Chained `Where` calls AND together; ordering calls append in sequence; `Take`/`Skip` page.
+
+```csharp
+var top10 = await db.Table<PlayerData>().Query()
+    .Where(p => p.Kills > 100)
+    .OrderByDescending(p => p.Kills)
+    .ThenBy(p => p.Name)
+    .Take(10)
+    .ToListAsync();
+
+var page3 = await db.Table<PlayerData>().Query()
+    .OrderBy(p => p.Name)
+    .Skip(40).Take(20)
+    .ToListAsync();
+```
+
+`FirstOrDefaultAsync()`, `CountAsync()`, and `AnyAsync()` are available on the builder too.
+
+## Transactions
+
+`BeginTransactionAsync` opens a connection and transaction; every DbSet read/write has an
+overload accepting it. Disposing without committing rolls back.
+
+```csharp
+using var tx = await db.BeginTransactionAsync();
+from.Balance -= amount;
+to.Balance += amount;
+await db.Table<Wallet>().UpdateAsync(from, tx);
+await db.Table<Wallet>().UpdateAsync(to, tx);
+await tx.CommitAsync();
+```
+
+Note: `WithConnectionAsync` shares one connection but does NOT start a transaction.
+
+## Batch operations
+
+```csharp
+await db.Table<LogRow>().InsertRangeAsync(rows);       // chunked multi-row VALUES
+await db.Table<PlayerData>().UpdateRangeAsync(players); // one connection, N statements
+```
+
+Both have transaction overloads and fire lifecycle hooks per entity. `InsertRangeAsync`
+assigns auto-increment IDs back sequentially (MySQL allocates consecutive IDs for a single
+multi-row INSERT).
+
+## Extended expression support
+
+`Where`/`FirstOrDefaultAsync`/`CountAsync`/`AnyAsync`/`DeleteAsync(expr)` predicates now
+translate:
+
+```csharp
+p => p.Name.Contains("jack")          // `name` LIKE '%jack%'  (wildcards escaped)
+p => p.Name.StartsWith("j")           // `name` LIKE 'j%'
+p => p.Name.EndsWith("k")             // `name` LIKE '%k'
+p => string.IsNullOrEmpty(p.Note)     // (`note` IS NULL OR `note` = '')
+p => ids.Contains(p.Id)               // `id` IN (@p0, @p1, ...) — empty list matches nothing
+```
+
+Method calls on captured values (e.g. `p.Name == prefix.ToLowerInvariant()`) still evaluate
+client-side. Untranslatable methods on entity properties throw `NotSupportedException` with
+the supported list.
+
+## Transient-fault retry
+
+Reads and single-statement autocommit writes automatically retry (3 attempts, exponential
+backoff) on MySQL deadlock (1213), lock-wait timeout (1205), and transient connection
+failures. Statements inside a `BbTransaction` are never retried — a deadlock rolls back the
+whole transaction, which only your code can restart.

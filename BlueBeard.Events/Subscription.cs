@@ -11,19 +11,15 @@ public sealed class Subscription : IDisposable
 {
     internal long Id { get; }
 
-    private readonly IEventBus _owner;
+    // Set by the owning bus; kept as a delegate so the public IEventBus interface stays
+    // untouched (adding interface members breaks external implementors).
+    internal Action<Subscription> Unsubscriber;
 
     internal Subscription(long id)
     {
         Id = id;
     }
 
-    internal Subscription(long id, IEventBus owner)
-    {
-        Id = id;
-        _owner = owner;
-    }
-
     /// <summary>Unsubscribe from the owning bus. Safe to call multiple times.</summary>
-    public void Dispose() => _owner?.Unsubscribe(this);
+    public void Dispose() => Unsubscriber?.Invoke(this);
 }

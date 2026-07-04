@@ -206,3 +206,29 @@ It runs after the main result set is read and the reader is closed, on the same 
 - **No cycle detection on save.** Inserting a parent with `Members` already populated does *not* cascade-insert the children. You insert each entity explicitly.
 - **No lazy loading.** Navigation properties are loaded eagerly when entities are read. If a parent has 50,000 children, all 50,000 are loaded. Use `QuerySqlAsync` with explicit joins for cases where you need finer control.
 - **Writes don't traverse navigations.** `UpdateAsync(faction)` does not update `faction.Members`. Update each entity in its own `DbSet<T>` call.
+## Obfuscation-durable declarations (type tokens)
+
+Property-name strings in `[HasMany("...")]`, `[BelongsTo("...")]`, and
+`[ForeignKey(typeof(T), "...")]` do not survive assembly obfuscation. The parameterless /
+type-only forms resolve everything through Type tokens, which do:
+
+```csharp
+[Table("factions")]
+public class Faction
+{
+    [PrimaryKey, AutoIncrement] public int Id { get; set; }
+    [HasMany] public List<Member> Members { get; set; }        // FK found via type token
+}
+
+[Table("members")]
+public class Member
+{
+    [PrimaryKey, AutoIncrement] public int Id { get; set; }
+    [ForeignKey(typeof(Faction))] public int FactionId { get; set; }  // references Faction's PK
+    [BelongsTo] public Faction Faction { get; set; }           // local FK found via type token
+}
+```
+
+Resolution requires exactly one `[ForeignKey]` on the child pointing at the parent type —
+with two or more, declare the property name explicitly (ambiguity is refused, not guessed).
+The string forms keep working and are tried first.

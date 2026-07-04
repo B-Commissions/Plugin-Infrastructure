@@ -274,3 +274,68 @@ When a type is first used (via `RegisterEntity<T>`, `Table<T>`, or any `DbSet<T>
 4. Builds a `ColumnInfo` list and `NavigationInfo` list, identifies the primary key.
 
 The result is cached in a `ConcurrentDictionary` so reflection only happens once per type.
+## Column model attributes
+
+These attributes are all optional and additive — entities without them produce exactly the
+same schema as previous library versions.
+
+### [Required] / [Column(Nullable = ...)]
+
+Explicit nullability control. `[Required]` emits `NOT NULL`; `[Column("x", Nullable = true)]`
+emits an explicit `NULL`. When neither is declared, the column keeps the historical default
+(nullable, no clause in DDL) and schema sync will **never** modify nullability on existing
+tables — drift is only enforced for explicit declarations.
+
+```csharp
+[Required, MaxLength(64)]
+public string Name { get; set; }          // VARCHAR(64) NOT NULL
+```
+
+`[Required]` wins if it conflicts with `Nullable = true`. Primary keys and auto-increment
+columns are implicitly NOT NULL (MySQL enforces this itself).
+
+### [DefaultValue(...)]
+
+Database-side `DEFAULT` clause. Affects rows inserted without the column (raw SQL, other
+tools) — the ORM's own `InsertAsync` always sends every mapped value.
+
+```csharp
+[DefaultValue(0)]        public int Balance { get; set; }
+[DefaultValue("guest")]  public string Rank { get; set; }
+[DefaultValue(true)]     public bool Enabled { get; set; }
+[DefaultValue(ServerDefault.CurrentTimestamp)]
+public DateTime CreatedAt { get; set; }   // DATETIME DEFAULT CURRENT_TIMESTAMP
+```
+
+Under `MigrationMode.Update`, a missing or different default triggers a `MODIFY COLUMN`.
+Comparison is conservative across MySQL/MariaDB representation quirks.
+
+### [Unique]
+
+Single-column UNIQUE constraint, implemented as a unique index named `ux_{table}_{column}`.
+
+```csharp
+[Unique] public string SteamId { get; set; }
+```
+
+### [Index]
+
+Secondary index, named `ix_{table}_{column}`. Composites share a `Group`; `Order` controls
+column position (lower first).
+
+```csharp
+[Index]                                   public int Level { get; set; }
+[Index(Unique = true)]                    public string Token { get; set; }
+[Index(Group = "region", Order = 0)]      public int RegionY { get; set; }
+[Index(Group = "region", Order = 1)]      public int RegionX { get; set; }  // ix_{table}_region (RegionY, RegionX)
+```
+
+Indexes are emitted at CREATE and, under `MigrationMode.Update`, created on existing tables
+when missing (matched by name, never dropped). Creating a unique index over data that
+violates uniqueness logs an error and continues.
+
+### [MaxLength]
+
+String sizing: `[MaxLength(64)]` → `VARCHAR(64)`; `[MaxLength(Text = true)]` (or a length
+above 16383) → `TEXT`. Unspecified strings stay `VARCHAR(255)`. Ignored when
+`[ColumnType]` overrides the SQL type outright.

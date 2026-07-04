@@ -12,9 +12,6 @@ public interface IEventBus
 {
     void Clear();
     int SubscriberCount { get; }
-
-    /// <summary>Remove a previously registered subscription (used by <see cref="Subscription.Dispose"/>).</summary>
-    void Unsubscribe(Subscription subscription);
 }
 
 /// <summary>
@@ -75,7 +72,7 @@ public class EventBus<TAction> : IEventBus where TAction : struct, Enum
                 index--;
             _entries.Insert(index, entry);
         }
-        return new Subscription(id, this);
+        return new Subscription(id) { Unsubscriber = Unsubscribe };
     }
 
     /// <summary>Remove a previously registered subscription.</summary>

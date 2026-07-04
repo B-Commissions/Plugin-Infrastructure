@@ -124,3 +124,30 @@ if (item.state == null || item.state.Length < StateSize)
     item.state = new byte[StateSize];
 ItemStateEncoder.WriteUInt64(item.state, 0, ownerSteamId);
 ```
+
+## Tagged block headers (versioned custom state)
+
+For custom state that must evolve after plugins ship, prefix your payload with a 4-byte
+block header (magic + version) instead of relying on fixed offsets:
+
+```csharp
+const ushort MyMagic = 0x4B57;
+
+// write
+var w = new StateWriter(state, offset);
+w.WriteBlockHeader(MyMagic, version: 2)
+ .WriteUInt32(charges)
+ .WriteBool(favourite);          // added in v2
+
+// read
+var r = new StateReader(state, offset);
+if (r.TryReadBlockHeader(MyMagic, out var version))
+{
+    var charges = r.ReadUInt32();
+    var favourite = version >= 2 && r.ReadBool();
+}
+```
+
+`TryReadBlockHeader` restores the cursor and returns false on a magic mismatch, so probing
+state written before the block convention is safe. The header is plain UInt16 writes — the
+static `ItemStateEncoder` API remains byte-compatible and untouched.

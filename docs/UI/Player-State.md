@@ -155,3 +155,17 @@ State is cleared automatically in two situations:
 2. **Player disconnects** -- `UIPlayerComponent.Reset()` is called via the `Provider.onEnemyDisconnected` hook.
 
 You do not need to clean up State manually. If you switch screens via `SetScreen`, State is **not** cleared -- this lets you share data between screens if needed. If you want to clear screen-specific keys when leaving a screen, do so in `OnHide`.
+
+## Element helpers and pagination
+
+`UIElements` wraps the raw `EffectManager` element calls, keyed off the `UIContext` (and
+no-ops safely for a player mid-disconnect):
+
+```csharp
+UIElements.SetText(context, "Label_Balance", $"${balance}");
+UIElements.SetVisible(context, "Panel_Admin", isAdmin);
+UIElements.SetImage(context, "Icon_Avatar", url);
+```
+
+`UIPagination<T>` owns a page number in `UIPlayerComponent.State` and renders one page
+into fixed row slots — see the XML docs on the class for the prev/next wiring pattern.

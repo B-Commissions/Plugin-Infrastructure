@@ -11,7 +11,8 @@ BlueBeard.Database is a lightweight MySQL ORM for Unturned plugins running Rocke
 - [Queries](Queries) -- CRUD operations reference, including the raw-SQL escape hatches
 - [Converters](Converters) -- mapping non-primitive CLR types (Guid, byte[], TimeSpan, custom)
 - [Relationships](Relationships) -- foreign keys, `HasMany`, `BelongsTo`
-- [Migrations](Migrations) -- schema evolution via `MigrationMode`
+- [Migrations](Migrations) -- schema evolution via `MigrationMode` and versioned `IMigration` steps
+- [Lifecycle Hooks](Lifecycle-Hooks) -- Before/After Insert/Update/Delete entity callbacks
 - [Examples](Examples) -- full plugin implementation examples
 
 ---

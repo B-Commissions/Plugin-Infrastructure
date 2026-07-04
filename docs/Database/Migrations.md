@@ -122,3 +122,42 @@ DatabaseManager.RegisterEntity<TestEntity>(MigrationMode.Reset);
 ```
 
 Fresh DB on every test run.
+## Update-mode diffing (type, nullability, default — independently)
+
+`Update` compares each column's **type** (`COLUMN_TYPE`), **nullability** (`IS_NULLABLE`),
+and **default** (`COLUMN_DEFAULT`) separately, and only emits `MODIFY COLUMN` when
+something real differs:
+
+- Nullability drift is enforced only for columns with an explicit `[Required]` /
+  `[Column(Nullable = ...)]` declaration. Unannotated entities never churn legacy schemas.
+- Defaults are compared only when `[DefaultValue]` is present, tolerating MySQL/MariaDB
+  representation quirks (quoting, expression parens, `current_timestamp()` spelling).
+- `MODIFY` on an auto-increment column preserves the `AUTO_INCREMENT` clause.
+- Missing `[Unique]`/`[Index]` indexes are created (matched by name, never dropped).
+
+## Versioned migrations (IMigration)
+
+For changes additive sync can't express — renames, backfills, destructive changes —
+register run-once migration steps. Applied versions are tracked in
+`__bluebeard_migrations`; pending steps run in ascending version order during `Load()`,
+after schema sync.
+
+```csharp
+public class RenameKillsColumn : IMigration
+{
+    public int Version => 2;
+    public async Task UpAsync(MySqlConnection conn)
+    {
+        using var cmd = new MySqlCommand(
+            "ALTER TABLE `players` RENAME COLUMN `kils` TO `kills`;", conn);
+        await cmd.ExecuteNonQueryAsync();
+    }
+}
+
+db.RegisterEntity<PlayerData>(MigrationMode.Update);
+db.RegisterMigration(new RenameKillsColumn());
+db.Load();   // sync, then pending migrations in order
+```
+
+Registering two migrations with the same version fails fast. `DatabaseManager.LoadAsync()`
+is available when you want startup off the main thread; the sync `Load()` is unchanged.

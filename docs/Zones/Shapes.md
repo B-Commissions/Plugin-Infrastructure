@@ -96,3 +96,12 @@ When a zone is created, the `ZoneManager`:
 4. Adds a `ZoneComponent` that listens for `OnTriggerEnter` and `OnTriggerExit`
 
 The `ZoneComponent` detects both players (by the `"Player"` tag) and vehicles (by the `"Vehicle"` tag). For vehicles, events fire for each passenger individually.
+
+## Polygon zones and concave shapes
+
+Unity forces polygon trigger colliders to their **convex hull** (and caps convex meshes at
+255 triangles). BlueBeard compensates: the collider is only the trigger, and the true
+point-in-polygon test is authoritative for membership. Players standing in a concave notch
+(inside the hull, outside the polygon) are correctly treated as outside — enter/exit events
+and flags follow the real shape via the tracker's periodic re-check. Extremely complex
+polygons should still be simplified to stay under the collider triangle cap.

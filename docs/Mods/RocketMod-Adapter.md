@@ -62,3 +62,17 @@ RocketMod's `HasPermission` returns true for unset nodes (permissive default). T
 ## Using alongside existing direct Rocket calls
 
 The adapter is additive. Existing libraries that still call `Rocket.Core.Logging.Logger.Log` or `UnturnedChat.Say` continue to work — they bypass `BlueBeardHost` entirely. Migration to the abstraction is per-library and incremental.
+
+## Translations
+
+Bind your plugin's Rocket `Translations` so libraries and shared code can use
+`BlueBeardHost.Translations.Translate(key, args)`:
+
+```csharp
+RocketModBootstrap.Install(this);            // Install() + InstallTranslations(this)
+// or separately:
+RocketModBootstrap.InstallTranslations(this);
+```
+
+Missing keys fall back to the key itself; when nothing is bound, a passthrough translator
+(key + string.Format) is used, so `Translate` never returns null.

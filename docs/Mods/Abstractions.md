@@ -172,3 +172,15 @@ public interface IPluginHost
 ```
 
 Reserved for the per-library migration: existing plugin entry points (e.g. `ZonesPlugin : RocketPlugin`) will be split into a framework-agnostic module that implements `IPluginHost` and a thin Rocket / OpenMod shell that hosts it.
+
+## Extended services
+
+- `BlueBeardHost.PermissionsAsync` (`IPermissionsAsync`) — async permission checks and
+  group changes. Natively async under OpenMod; a zero-cost wrapper over the sync
+  `IPermissions` under RocketMod.
+- `BlueBeardHost.Translations` (`ITranslations`) — message translation with a passthrough
+  fallback (never null). Bound by `RocketModBootstrap.InstallTranslations` /
+  `OpenModBootstrap.InstallTranslations`.
+- `BlueBeardHost.ConfigureExtras(...)` installs these; the original `Configure` signature
+  is unchanged for binary compatibility.
+- `IPlayerEvents` fires on the Unturned main thread under both adapters.

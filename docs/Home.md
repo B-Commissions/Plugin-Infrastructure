@@ -37,7 +37,8 @@ Centralised cooldown / timer tracking. In-memory by default with an optional MyS
 Lightweight MySQL ORM with attribute-based entities and LINQ-to-SQL expressions.
 - [Getting Started](Database/Getting-Started.md) -- Setup and initialization
 - [Entities](Database/Entities.md) -- Defining entities with attributes
-- [Queries](Database/Queries.md) -- CRUD operations and expression support
+- [Queries](Database/Queries.md) -- CRUD operations, composable queries, transactions, batch ops
+- [Lifecycle Hooks](Database/Lifecycle-Hooks.md) -- Before/After Insert/Update/Delete entity callbacks
 - [Examples](Database/Examples.md) -- Complete plugin with database operations
 
 ### [Effects](Effects/Home.md)

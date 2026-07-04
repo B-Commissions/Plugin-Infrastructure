@@ -30,6 +30,7 @@
 - [Relationships](Database-Relationships)
 - [Queries](Database-Queries)
 - [Migrations](Database-Migrations)
+- [Lifecycle Hooks](Database-Lifecycle-Hooks)
 - [Converters](Database-Converters)
 - [Examples](Database-Examples)
 

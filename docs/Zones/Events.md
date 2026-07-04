@@ -101,3 +101,17 @@ private void OnPlayerEnteredZone(Player player, ZoneDefinition zone)
     // Your logic
 }
 ```
+
+## ZoneDestroyed
+
+`ZoneManager.ZoneDestroyed` fires when a zone is removed via `DestroyZone` (or replaced by
+`CreateZone`). Unity does not fire `OnTriggerExit` for a destroyed collider's occupants, so
+subscribe to this to release per-zone state; `PlayerTracker` already does, firing its exit
+event for every player who was inside.
+
+## Height/shape-filtered events
+
+`PlayerTracker.PlayerEnteredZone` / `PlayerExitedZone` fire on *effective* membership —
+trigger collider AND height band AND true polygon shape. Prefer these over the raw
+`ZoneManager` events (which fire on collider contact only) unless you specifically need
+raw collider transitions.

@@ -125,3 +125,15 @@ When a player is in multiple overlapping zones, the zone with the highest `Prior
 /zone flag add genroom infiniteGenerator
 /zone flag add genroom noZombie
 ```
+
+## Height bounds and flags
+
+All flag enforcement respects a zone's `LowerHeight`/`UpperHeight` band. Enter/exit-driven
+flags (`enterMessage`, `noEnter`, `enterAddGroup`, effects, `noItemEquip`) consume the
+`PlayerTracker`'s height-filtered events, and a periodic vertical re-check transitions
+membership as players fly above or descend into the band — a player who enters inside the
+band and then flies above `UpperHeight` genuinely leaves the zone (and re-enters when they
+descend). A height offset of `0` is a real bound, not "unset".
+
+`noItemEquip` also enforces when a player equips a blocked item *after* entering the zone,
+not just at the moment of entry.
