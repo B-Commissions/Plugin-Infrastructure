@@ -97,12 +97,33 @@ public class DatabaseManager : IManager
     public MySqlConnection CreateConnection() => new(_connectionString);
 
     /// <summary>
-    /// Convenience wrapper for transactional or multi-statement work that needs one connection.
+    /// Convenience wrapper for multi-statement work that needs one open connection.
+    /// This does NOT start a transaction — use <see cref="BeginTransactionAsync"/> for atomicity.
     /// </summary>
     public async Task<TResult> WithConnectionAsync<TResult>(Func<MySqlConnection, Task<TResult>> action)
     {
         using var conn = CreateConnection();
         await conn.OpenAsync();
         return await action(conn);
+    }
+
+    /// <summary>
+    /// Open a connection and begin a transaction. Pass the result to the DbSet overloads
+    /// that accept a <see cref="BbTransaction"/>; dispose without committing to roll back.
+    /// </summary>
+    public async Task<BbTransaction> BeginTransactionAsync()
+    {
+        var conn = CreateConnection();
+        await conn.OpenAsync();
+        try
+        {
+            var tx = await conn.BeginTransactionAsync();
+            return new BbTransaction(conn, tx);
+        }
+        catch
+        {
+            conn.Dispose();
+            throw;
+        }
     }
 }

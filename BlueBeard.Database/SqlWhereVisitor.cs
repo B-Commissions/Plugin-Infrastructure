@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -76,11 +77,117 @@ public class SqlWhereVisitor(TableMetadata metadata) : ExpressionVisitor
         if (node.Expression is ParameterExpression)
         {
             var columnName = metadata.GetColumnName(node.Member.Name);
-            _sb.Append($"`{columnName}`");
+            _sb.Append(SqlIdentifier.Quote(columnName));
             return node;
         }
         AddParameter(EvaluateExpression(node));
         return node;
+    }
+
+    protected override Expression VisitMethodCall(MethodCallExpression node)
+    {
+        // string.IsNullOrEmpty(x.Name)  ->  (`name` IS NULL OR `name` = '')
+        if (node.Method.IsStatic && node.Method.DeclaringType == typeof(string) &&
+            node.Method.Name == nameof(string.IsNullOrEmpty))
+        {
+            var col = TryGetColumn(node.Arguments[0])
+                ?? throw new NotSupportedException("string.IsNullOrEmpty is only supported on entity properties.");
+            var quoted = SqlIdentifier.Quote(col.ColumnName);
+            _sb.Append($"({quoted} IS NULL OR {quoted} = '')");
+            return node;
+        }
+
+        // x.Name.Contains/StartsWith/EndsWith("...")  ->  `name` LIKE @p (wildcards escaped)
+        if (node.Object != null && node.Method.DeclaringType == typeof(string) &&
+            node.Arguments.Count == 1 &&
+            node.Method.Name is nameof(string.Contains) or nameof(string.StartsWith) or nameof(string.EndsWith))
+        {
+            var col = TryGetColumn(node.Object);
+            if (col != null)
+            {
+                var raw = EvaluateExpression(node.Arguments[0]) as string
+                    ?? throw new NotSupportedException($"{node.Method.Name} requires a non-null string argument.");
+                var escaped = raw.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+                var pattern = node.Method.Name switch
+                {
+                    nameof(string.StartsWith) => escaped + "%",
+                    nameof(string.EndsWith) => "%" + escaped,
+                    _ => "%" + escaped + "%"
+                };
+
+                _sb.Append($"{SqlIdentifier.Quote(col.ColumnName)} LIKE @p{_parameters.Count}");
+                _parameters.Add(pattern);
+                return node;
+            }
+        }
+
+        // ids.Contains(x.Id)  /  Enumerable.Contains(ids, x.Id)  ->  `id` IN (@p0, @p1, ...)
+        if (node.Method.Name == nameof(Enumerable.Contains))
+        {
+            Expression collectionExpr = null, itemExpr = null;
+            if (node.Object == null && node.Arguments.Count == 2 && node.Method.DeclaringType == typeof(Enumerable))
+            {
+                collectionExpr = node.Arguments[0];
+                itemExpr = node.Arguments[1];
+            }
+            else if (node.Object != null && node.Arguments.Count == 1)
+            {
+                collectionExpr = node.Object;
+                itemExpr = node.Arguments[0];
+            }
+
+            if (collectionExpr != null && TryGetColumn(itemExpr) is { } col)
+            {
+                var values = ((IEnumerable)EvaluateExpression(collectionExpr))
+                    ?.Cast<object>().ToList()
+                    ?? throw new NotSupportedException("Contains requires a non-null collection.");
+
+                if (values.Count == 0)
+                {
+                    // IN () is invalid SQL; an empty set matches nothing.
+                    _sb.Append("(1 = 0)");
+                    return node;
+                }
+
+                var placeholders = new List<string>(values.Count);
+                foreach (var value in values)
+                {
+                    var v = value != null && col.Converter != null ? col.Converter.ToProvider(value) : value;
+                    placeholders.Add($"@p{_parameters.Count}");
+                    _parameters.Add(v);
+                }
+                _sb.Append($"{SqlIdentifier.Quote(col.ColumnName)} IN ({string.Join(", ", placeholders)})");
+                return node;
+            }
+        }
+
+        // Anything else that doesn't touch the entity parameter is a value — evaluate it.
+        if (!ReferencesParameter(node))
+        {
+            AddParameter(EvaluateExpression(node));
+            return node;
+        }
+
+        throw new NotSupportedException(
+            $"Method '{node.Method.DeclaringType?.Name}.{node.Method.Name}' cannot be translated to SQL. " +
+            "Supported: string Contains/StartsWith/EndsWith, string.IsNullOrEmpty, collection Contains.");
+    }
+
+    private static bool ReferencesParameter(Expression expr)
+    {
+        var finder = new ParameterFinder();
+        finder.Visit(expr);
+        return finder.Found;
+    }
+
+    private sealed class ParameterFinder : ExpressionVisitor
+    {
+        public bool Found { get; private set; }
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            Found = true;
+            return node;
+        }
     }
 
     protected override Expression VisitConstant(ConstantExpression node)

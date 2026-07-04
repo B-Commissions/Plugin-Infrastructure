@@ -17,6 +17,16 @@ public class ForeignKeyAttribute : Attribute
         ReferencedType = referencedType;
         ReferencedProperty = referencedProperty;
     }
+
+    /// <summary>
+    /// Reference the target type's primary key. Durable under obfuscation — no
+    /// property-name string involved.
+    /// </summary>
+    /// <param name="referencedType">The entity type this column references.</param>
+    public ForeignKeyAttribute(Type referencedType)
+    {
+        ReferencedType = referencedType;
+    }
 }
 
 public enum ReferentialAction
