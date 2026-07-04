@@ -106,6 +106,30 @@ public class SnapManager : IManager
     }
 
     /// <summary>
+    /// Scans tracked hosts and unregisters any whose backing barricade has been destroyed
+    /// in the world (gunfire, explosions, decay). Salvage is handled eagerly by
+    /// <see cref="OnSalvageRequested"/>; this catches every other destruction path, which
+    /// previously leaked the host and orphaned its children forever.
+    /// </summary>
+    internal void ScanForDestroyedHosts()
+    {
+        List<SnapHost> dead = null;
+        foreach (var host in _hosts.Values)
+        {
+            if (host.HostDrop?.model == null)
+                (dead ??= []).Add(host);
+        }
+        if (dead == null) return;
+
+        foreach (var host in dead)
+        {
+            // Same child policy as the salvage path.
+            ClearHost(host, destroyBarricades: _config.DestroyChildrenWithHost);
+            RemoveHost(host);
+        }
+    }
+
+    /// <summary>
     /// Scans all tracked child attachments and unsnaps any whose backing
     /// <see cref="BarricadeDrop"/> has been destroyed in the world (gunfire,
     /// explosions, decay, etc.). Invoked at ~1 Hz by <see cref="DestructionWatcher"/>.
@@ -143,7 +167,12 @@ public class SnapManager : IManager
             _accum += Time.deltaTime;
             if (_accum < 1f) return;
             _accum = 0f;
-            try { _mgr.ScanForDestroyedChildren(); } catch { /* swallow per-tick exceptions */ }
+            try
+            {
+                _mgr.ScanForDestroyedChildren();
+                _mgr.ScanForDestroyedHosts();
+            }
+            catch { /* swallow per-tick exceptions */ }
         }
     }
 

@@ -28,6 +28,11 @@ public static class OpenModBootstrap
     {
         _playerEvents ??= new OpenModPlayerEvents(eventBus, component);
 
+        // Install runs on the main thread (OpenMod plugin load), the only place the
+        // dispatcher's runner GameObject can legally be created. After this,
+        // QueueOnMainThread is safe from any thread.
+        OpenModTaskDispatcher.InitializeRunner();
+
         BlueBeardHost.Configure(
             logger: new OpenModLogger(logger),
             chat: new OpenModChat(userDirectory),
@@ -40,6 +45,7 @@ public static class OpenModBootstrap
     {
         _playerEvents?.Dispose();
         _playerEvents = null;
+        OpenModTaskDispatcher.DestroyRunner();
         BlueBeardHost.Reset();
     }
 }

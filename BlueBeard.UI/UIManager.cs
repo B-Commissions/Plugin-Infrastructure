@@ -101,21 +101,36 @@ public class UIManager : IManager
         if (comp == null || !comp.IsOpen) return;
 
         var context = BuildContext(player, comp);
+        var ui = comp.CurrentUI;
 
-        if (comp.CurrentDialog != null)
-        {
-            comp.CurrentDialog.OnHide(context);
-            comp.CurrentDialog = null;
-        }
+        RunCloseHooks(context, comp);
 
-        comp.CurrentScreen?.OnHide(context);
-        comp.CurrentUI?.OnClosed(context);
-
-        if (comp.CurrentUI != null)
-            EffectManager.askEffectClearByID(comp.CurrentUI.EffectId, player.Player.channel.owner.transportConnection);
+        if (ui != null)
+            EffectManager.askEffectClearByID(ui.EffectId, player.Player.channel.owner.transportConnection);
         player.Player.setPluginWidgetFlag(EPluginWidgetFlags.Modal, false);
 
         comp.Reset();
+    }
+
+    /// <summary>
+    /// Fire the dialog/screen/UI teardown hooks in close order. Consumer hooks are
+    /// individually guarded so one throwing subscriber can't skip the rest of the
+    /// teardown (critical on the disconnect path).
+    /// </summary>
+    private static void RunCloseHooks(UIContext context, UIPlayerComponent comp)
+    {
+        if (comp.CurrentDialog != null)
+        {
+            try { comp.CurrentDialog.OnHide(context); }
+            catch (Exception ex) { Debug.LogException(ex); }
+            comp.CurrentDialog = null;
+        }
+
+        try { comp.CurrentScreen?.OnHide(context); }
+        catch (Exception ex) { Debug.LogException(ex); }
+
+        try { comp.CurrentUI?.OnClosed(context); }
+        catch (Exception ex) { Debug.LogException(ex); }
     }
 
     // -----------------------------------------------------------------------
@@ -282,11 +297,18 @@ public class UIManager : IManager
         {
             if (client.player == null) continue;
             var comp = client.player.gameObject.GetComponent<UIPlayerComponent>();
-            if (comp != null && comp.IsOpen)
+            if (comp == null) continue;
+
+            if (comp.IsOpen)
             {
                 var uPlayer = UnturnedPlayer.FromPlayer(client.player);
                 CloseUI(uPlayer);
             }
+
+            // Destroy the component itself: on plugin hot-reload the assembly changes
+            // identity, so a leftover component would be invisible to GetComponent<> in
+            // the new assembly and a second one would stack on top of it.
+            UnityEngine.Object.Destroy(comp);
         }
 
         _uis.Clear();
@@ -321,8 +343,24 @@ public class UIManager : IManager
     {
         if (steamPlayer.player == null) return;
         var comp = steamPlayer.player.gameObject.GetComponent<UIPlayerComponent>();
-        if (comp != null && comp.IsOpen)
-            comp.Reset();
+        if (comp == null || !comp.IsOpen) return;
+
+        // Run the full OnHide/OnClosed hook sequence so screens that subscribed to
+        // managers/event buses in OnShow release those subscriptions — skipping them
+        // leaked one subscription per player who disconnected with a UI open. The
+        // effect-clear/widget-flag network calls are skipped: the connection is gone.
+        try
+        {
+            var uPlayer = UnturnedPlayer.FromPlayer(steamPlayer.player);
+            if (uPlayer != null)
+                RunCloseHooks(BuildContext(uPlayer, comp), comp);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
+
+        comp.Reset();
     }
 
     private static UIPlayerComponent GetOrAddComponent(UnturnedPlayer player)
@@ -335,7 +373,8 @@ public class UIManager : IManager
 
     private static UIContext BuildContext(UnturnedPlayer player, UIPlayerComponent comp)
     {
-        ITransportConnection connection = player.Player.channel.owner.transportConnection;
+        // channel/owner can be mid-teardown for a disconnecting player.
+        ITransportConnection connection = player.Player.channel?.owner?.transportConnection;
         short effectKey = comp.CurrentUI?.EffectKey ?? 0;
         return new UIContext(player, connection, effectKey, comp);
     }

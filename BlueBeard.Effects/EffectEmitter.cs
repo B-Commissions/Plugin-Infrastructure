@@ -16,6 +16,9 @@ public class EffectEmitter : MonoBehaviour
     public IEffectAudience Audience { get; set; }
     private Coroutine _coroutine;
 
+    /// <summary>False once the emitter finished (one-shot) or its GameObject was destroyed.</summary>
+    public bool IsAlive => this != null && _coroutine != null;
+
     public void Begin()
     {
         if (_coroutine != null) return;
