@@ -57,6 +57,15 @@ public class ConfigManager : IManager
             if (config != null)
             {
                 ValidateAndMigrate(config, path);
+
+                // Enforce [Range]/[NotEmpty]/etc validation attributes, if the config
+                // declares any: clamp or reset invalid values and log each correction.
+                var report = Validation.ConfigValidator.ValidateAndCorrect(config);
+                foreach (var fix in report.Corrections)
+                    Logger.LogWarning($"[ConfigManager] {Path.GetFileName(path)}: {fix}");
+                foreach (var error in report.Uncorrectable)
+                    Logger.LogWarning($"[ConfigManager] {Path.GetFileName(path)}: {error}");
+
                 return config;
             }
         }
